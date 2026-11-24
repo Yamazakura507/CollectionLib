@@ -34,9 +34,16 @@ It implements `ICollectionListViewController`, which can be assigned to `Collect
 Derive a list control from `CollectionListViewBase`. The base owns reusable bindable presentation properties:
 
 - `Title`, `Icon`, `DockTitleText`;
-- `ItemBackgroundMode`, `ItemBackgroundColor`;
-- `ListBackgroundMode`, `ListBackgroundColor`, `ListBackgroundImageSource`;
+- `SearchEffect` (`CollectionSearchEffect`);
+- `GroupDisplayMode` (`CollectionGroupDisplayMode`);
+- `GroupExpandEffect` (`CollectionGroupExpandEffect`);
+- `ItemBackgroundMode` (`CollectionItemBackgroundMode`), `ItemBackgroundColor`;
+- `ListBackgroundMode` (`CollectionListBackgroundMode`), `ListBackgroundColor`, `ListBackgroundImageSource`;
 - `ViewController`.
+
+The base control owns the behavior behind these settings. It executes the common search-panel and group expand/collapse animations, resolves item and viewport background colors, and applies image, custom, base and transparent background modes to registered visual surfaces. A derived control supplies its own XAML elements through `ConfigureListBackground(...)`, registers item surfaces through `RegisterItemBackgroundSurface(...)`, and unregisters them when they are discarded.
+
+`GroupDisplayMode` is also a shared bindable property. When it changes, the base refreshes automatic item backgrounds and calls `OnGroupDisplayModeChanged()`; the derived control only rebuilds its domain-specific group templates. For example, `MessageListView` still constructs the message block and connected-line trees because those templates consume `MessageGroup`, but it no longer owns the setting or the generic transition/background algorithms.
 
 The common popup building APIs are also available to subclasses:
 

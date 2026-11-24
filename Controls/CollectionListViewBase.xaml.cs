@@ -15,6 +15,13 @@ public abstract partial class CollectionListViewBase : ContentView
 {
     private const string PopupReorderPayloadKey = "CollectionListViewBase.ReorderPayload";
 
+    private readonly HashSet<VisualElement> itemBackgroundSurfaces = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<VisualElement> transitioningGroups = new(ReferenceEqualityComparer.Instance);
+    private Border? listViewportBorder;
+    private Image? listBackgroundImage;
+    private List<(VisualElement Element, Color Light, Color Dark)> themedBackgroundSurfaces = [];
+    private VisualElement[] transparentBackgroundSurfaces = [];
+
     /// <summary>
     /// Gets the registered popup option visuals, indexed by descriptor key.
     /// </summary>
@@ -58,6 +65,33 @@ public abstract partial class CollectionListViewBase : ContentView
     {
         get => (ICollectionListViewController?)GetValue(ViewControllerProperty);
         set => SetValue(ViewControllerProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the animation used when the search panel appears or disappears.
+    /// </summary>
+    public CollectionSearchEffect SearchEffect
+    {
+        get => (CollectionSearchEffect)GetValue(SearchEffectProperty);
+        set => SetValue(SearchEffectProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the presentation mode used for collection groups.
+    /// </summary>
+    public CollectionGroupDisplayMode GroupDisplayMode
+    {
+        get => (CollectionGroupDisplayMode)GetValue(GroupDisplayModeProperty);
+        set => SetValue(GroupDisplayModeProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the animation used when a group expands or collapses.
+    /// </summary>
+    public CollectionGroupExpandEffect GroupExpandEffect
+    {
+        get => (CollectionGroupExpandEffect)GetValue(GroupExpandEffectProperty);
+        set => SetValue(GroupExpandEffectProperty, value);
     }
 
     /// <summary>
@@ -166,6 +200,28 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: OnViewControllerChanged);
 
     /// <summary>
+    /// Identifies the <see cref="SearchEffect"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty SearchEffectProperty =
+        BindableProperty.Create(nameof(SearchEffect), typeof(CollectionSearchEffect),
+            typeof(CollectionListViewBase), CollectionSearchEffect.Fade);
+
+    /// <summary>
+    /// Identifies the <see cref="GroupDisplayMode"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty GroupDisplayModeProperty =
+        BindableProperty.Create(nameof(GroupDisplayMode), typeof(CollectionGroupDisplayMode),
+            typeof(CollectionListViewBase), CollectionGroupDisplayMode.Blocks,
+            propertyChanged: OnGroupDisplayModeChanged);
+
+    /// <summary>
+    /// Identifies the <see cref="GroupExpandEffect"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty GroupExpandEffectProperty =
+        BindableProperty.Create(nameof(GroupExpandEffect), typeof(CollectionGroupExpandEffect),
+            typeof(CollectionListViewBase), CollectionGroupExpandEffect.Fade);
+
+    /// <summary>
     /// Identifies the <see cref="Title"/> bindable property.
     /// </summary>
     public static readonly BindableProperty TitleProperty =
@@ -190,7 +246,11 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(ItemBackgroundMode), typeof(CollectionItemBackgroundMode),
             typeof(CollectionListViewBase), CollectionItemBackgroundMode.Automatic,
             propertyChanged: (bindable, oldValue, newValue) =>
-                ((CollectionListViewBase)bindable).OnItemBackgroundConfigurationChanged());
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.RefreshItemBackgroundSurfaces();
+                control.OnItemBackgroundConfigurationChanged();
+            });
 
     /// <summary>
     /// Identifies the <see cref="ItemBackgroundColor"/> bindable property.
@@ -199,7 +259,11 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(ItemBackgroundColor), typeof(Color),
             typeof(CollectionListViewBase), Color.FromArgb("#F7F8FA"),
             propertyChanged: (bindable, oldValue, newValue) =>
-                ((CollectionListViewBase)bindable).OnItemBackgroundConfigurationChanged());
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.RefreshItemBackgroundSurfaces();
+                control.OnItemBackgroundConfigurationChanged();
+            });
 
     /// <summary>
     /// Identifies the <see cref="ListBackgroundMode"/> bindable property.
@@ -208,7 +272,11 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(ListBackgroundMode), typeof(CollectionListBackgroundMode),
             typeof(CollectionListViewBase), CollectionListBackgroundMode.Base,
             propertyChanged: (bindable, oldValue, newValue) =>
-                ((CollectionListViewBase)bindable).OnListBackgroundConfigurationChanged());
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.ApplyListBackgroundConfiguration();
+                control.OnListBackgroundConfigurationChanged();
+            });
 
     /// <summary>
     /// Identifies the <see cref="ListBackgroundColor"/> bindable property.
@@ -217,7 +285,11 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(ListBackgroundColor), typeof(Color),
             typeof(CollectionListViewBase), Color.FromArgb("#FFFCFA"),
             propertyChanged: (bindable, oldValue, newValue) =>
-                ((CollectionListViewBase)bindable).OnListBackgroundConfigurationChanged());
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.ApplyListBackgroundConfiguration();
+                control.OnListBackgroundConfigurationChanged();
+            });
 
     /// <summary>
     /// Identifies the <see cref="ListBackgroundImageSource"/> bindable property.
@@ -226,7 +298,202 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(ListBackgroundImageSource), typeof(ImageSource),
             typeof(CollectionListViewBase), default(ImageSource),
             propertyChanged: (bindable, oldValue, newValue) =>
-                ((CollectionListViewBase)bindable).OnListBackgroundConfigurationChanged());
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.ApplyListBackgroundConfiguration();
+                control.OnListBackgroundConfigurationChanged();
+            });
+
+    /// <summary>
+    /// Registers an item surface so the base control can apply the configured background mode.
+    /// </summary>
+    protected void RegisterItemBackgroundSurface(VisualElement surface)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        itemBackgroundSurfaces.Add(surface);
+        ApplyItemBackground(surface);
+    }
+
+    /// <summary>
+    /// Unregisters an item surface that is no longer owned by the collection view.
+    /// </summary>
+    protected void UnregisterItemBackgroundSurface(VisualElement surface)
+    {
+        if (surface is not null) itemBackgroundSurfaces.Remove(surface);
+    }
+
+    /// <summary>
+    /// Removes all item surfaces registered by the derived collection view.
+    /// </summary>
+    protected void ClearItemBackgroundSurfaces() => itemBackgroundSurfaces.Clear();
+
+    /// <summary>
+    /// Connects the generic list background renderer to the visual parts supplied by a derived view.
+    /// Theme surfaces use the supplied light and dark colors when no image background is active.
+    /// Transparent surfaces remain transparent in every background mode.
+    /// </summary>
+    protected void ConfigureListBackground(
+        Border viewport,
+        Image backgroundImage,
+        List<(VisualElement Element, Color Light, Color Dark)>? themeSurfaces = null,
+        params VisualElement[] transparentSurfaces)
+    {
+        ArgumentNullException.ThrowIfNull(viewport);
+        ArgumentNullException.ThrowIfNull(backgroundImage);
+
+        listViewportBorder = viewport;
+        listBackgroundImage = backgroundImage;
+        themedBackgroundSurfaces = themeSurfaces?.ToList() ?? [];
+        transparentBackgroundSurfaces = transparentSurfaces ?? [];
+        ApplyListBackgroundConfiguration();
+    }
+
+    /// <summary>
+    /// Applies the selected search-panel entrance animation to a supplied visual element.
+    /// </summary>
+    protected async Task ShowSearchPanelEffectAsync(VisualElement panel)
+    {
+        ArgumentNullException.ThrowIfNull(panel);
+
+        panel.IsVisible = true;
+        panel.Opacity = 1;
+
+        switch (SearchEffect)
+        {
+            case CollectionSearchEffect.Slide:
+                panel.Opacity = 0;
+                panel.TranslationY = -12;
+
+                await Task.WhenAll(
+                    panel.FadeToAsync(1, 170, Easing.CubicOut),
+                    panel.TranslateToAsync(0, 0, 190, Easing.CubicOut));
+                break;
+            case CollectionSearchEffect.Scale:
+                panel.Opacity = 0;
+                panel.Scale = 0.94;
+
+                await Task.WhenAll(
+                    panel.FadeToAsync(1, 160, Easing.CubicOut),
+                    panel.ScaleToAsync(1, 180, Easing.CubicOut));
+                break;
+            default:
+                panel.Opacity = 0;
+
+                await panel.FadeToAsync(1, 160, Easing.CubicOut);
+                break;
+        }
+
+        panel.Opacity = 1;
+        panel.TranslationY = 0;
+        panel.Scale = 1;
+    }
+
+    /// <summary>
+    /// Applies the selected search-panel exit animation to a supplied visual element.
+    /// </summary>
+    protected async Task HideSearchPanelEffectAsync(VisualElement panel)
+    {
+        ArgumentNullException.ThrowIfNull(panel);
+
+        switch (SearchEffect)
+        {
+            case CollectionSearchEffect.Slide:
+                await Task.WhenAll(
+                    panel.FadeToAsync(0, 110, Easing.CubicIn),
+                    panel.TranslateToAsync(0, -10, 130, Easing.CubicIn));
+                break;
+            case CollectionSearchEffect.Scale:
+                await Task.WhenAll(
+                    panel.FadeToAsync(0, 110, Easing.CubicIn),
+                    panel.ScaleToAsync(0.96, 120, Easing.CubicIn));
+                break;
+            default:
+                await panel.FadeToAsync(0, 120, Easing.CubicIn);
+                break;
+        }
+
+        panel.IsVisible = false;
+        panel.Opacity = 1;
+        panel.TranslationY = 0;
+        panel.Scale = 1;
+    }
+
+    /// <summary>
+    /// Toggles a group's children using the common collection group expansion animation.
+    /// Returns null when another transition is already running for the same visual element.
+    /// </summary>
+    protected async Task<bool?> ToggleGroupChildrenEffectAsync(VisualElement children, Action<bool>? onExpandedChanged = null)
+    {
+        ArgumentNullException.ThrowIfNull(children);
+
+        if (!transitioningGroups.Add(children)) return null;
+
+        bool expand = !children.IsVisible;
+        const uint expandDuration = 180;
+        const uint collapseDuration = 130;
+
+        try
+        {
+            if (expand)
+            {
+                children.IsVisible = true;
+
+                switch (GroupExpandEffect)
+                {
+                    case CollectionGroupExpandEffect.Fade:
+                        children.Opacity = 0;
+                        await children.FadeToAsync(1, expandDuration, Easing.CubicOut);
+                        break;
+                    case CollectionGroupExpandEffect.Slide:
+                        children.Opacity = 0;
+                        children.TranslationY = -9;
+                        await Task.WhenAll(
+                            children.FadeToAsync(1, expandDuration, Easing.CubicOut),
+                            children.TranslateToAsync(0, 0, expandDuration, Easing.CubicOut));
+                        break;
+                    case CollectionGroupExpandEffect.Scale:
+                        children.Opacity = 0;
+                        children.Scale = 0.97;
+                        await Task.WhenAll(
+                            children.FadeToAsync(1, expandDuration, Easing.CubicOut),
+                            children.ScaleToAsync(1, expandDuration, Easing.CubicOut));
+                        break;
+                }
+            }
+            else
+            {
+                switch (GroupExpandEffect)
+                {
+                    case CollectionGroupExpandEffect.Fade:
+                        await children.FadeToAsync(0, collapseDuration, Easing.CubicIn);
+                        break;
+                    case CollectionGroupExpandEffect.Slide:
+                        await Task.WhenAll(
+                            children.FadeToAsync(0, collapseDuration, Easing.CubicIn),
+                            children.TranslateToAsync(0, -7, collapseDuration, Easing.CubicIn));
+                        break;
+                    case CollectionGroupExpandEffect.Scale:
+                        await Task.WhenAll(
+                            children.FadeToAsync(0, collapseDuration, Easing.CubicIn),
+                            children.ScaleToAsync(0.97, collapseDuration, Easing.CubicIn));
+                        break;
+                }
+
+                children.IsVisible = false;
+            }
+
+            return expand;
+        }
+        finally
+        {
+            children.Opacity = 1;
+            children.TranslationY = 0;
+            children.Scale = 1;
+            children.IsVisible = expand;
+            transitioningGroups.Remove(children);
+            onExpandedChanged?.Invoke(expand);
+        }
+    }
 
     /// <summary>
     /// Clears the visual registries before rebuilding the popup content.
@@ -488,6 +755,13 @@ public abstract partial class CollectionListViewBase : ContentView
     private static void OnHeaderConfigurationChanged(BindableObject bindable, object oldValue, object newValue)
         => ((CollectionListViewBase)bindable).OnHeaderConfigurationChanged();
 
+    private static void OnGroupDisplayModeChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        CollectionListViewBase control = (CollectionListViewBase)bindable;
+        control.RefreshItemBackgroundSurfaces();
+        control.OnGroupDisplayModeChanged();
+    }
+
     private void ViewControllerOnStateChanged(object? sender, EventArgs e)
     {
         if (Dispatcher.IsDispatchRequired) Dispatcher.Dispatch(OnViewControllerStateChanged);
@@ -505,6 +779,12 @@ public abstract partial class CollectionListViewBase : ContentView
     protected virtual void OnHeaderConfigurationChanged() { }
 
     /// <summary>
+    /// Called when the group display mode changes.
+    /// Derived controls should rebuild their domain-specific group templates.
+    /// </summary>
+    protected virtual void OnGroupDisplayModeChanged() { }
+
+    /// <summary>
     /// Called when the item background configuration changes.
     /// </summary>
     protected virtual void OnItemBackgroundConfigurationChanged() { }
@@ -513,4 +793,57 @@ public abstract partial class CollectionListViewBase : ContentView
     /// Called when the viewport background configuration changes.
     /// </summary>
     protected virtual void OnListBackgroundConfigurationChanged() { }
+
+    private void ApplyItemBackground(VisualElement surface)
+    {
+        Color baseColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#2D323A") : Color.FromArgb("#F7F8FA");
+
+        bool automaticTransparent = GroupDisplayMode == CollectionGroupDisplayMode.Lines
+            || (ListBackgroundMode == CollectionListBackgroundMode.Image && ListBackgroundImageSource is not null);
+
+        surface.BackgroundColor = ItemBackgroundMode switch
+        {
+            CollectionItemBackgroundMode.Transparent => Colors.Transparent,
+            CollectionItemBackgroundMode.Base => baseColor,
+            CollectionItemBackgroundMode.Custom => ItemBackgroundColor,
+            _ => automaticTransparent ? Colors.Transparent : baseColor
+        };
+    }
+
+    private void RefreshItemBackgroundSurfaces()
+    {
+        foreach (VisualElement surface in itemBackgroundSurfaces) ApplyItemBackground(surface);
+    }
+
+    private void ApplyListBackgroundConfiguration()
+    {
+        if (listViewportBorder is null || listBackgroundImage is null) return;
+
+        Color baseColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#24272D") : Color.FromArgb("#FFFCFA");
+
+        bool hasImageBackground = ListBackgroundMode == CollectionListBackgroundMode.Image && ListBackgroundImageSource is not null;
+
+        listViewportBorder.BackgroundColor = hasImageBackground
+            ? Colors.Transparent
+            : ListBackgroundMode switch
+            {
+                CollectionListBackgroundMode.Transparent => Colors.Transparent,
+                CollectionListBackgroundMode.Custom => ListBackgroundColor,
+                _ => baseColor
+            };
+
+        foreach ((VisualElement element, Color light, Color dark) in themedBackgroundSurfaces)
+        {
+            element.BackgroundColor = hasImageBackground
+                ? Colors.Transparent
+                : Application.Current?.RequestedTheme == AppTheme.Dark ? dark : light;
+        }
+
+        foreach (VisualElement element in transparentBackgroundSurfaces) element.BackgroundColor = Colors.Transparent;
+
+        listBackgroundImage.Source = ListBackgroundImageSource;
+        listBackgroundImage.IsVisible = hasImageBackground;
+
+        RefreshItemBackgroundSurfaces();
+    }
 }
