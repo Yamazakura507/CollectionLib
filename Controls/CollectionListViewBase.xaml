@@ -3,13 +3,185 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:resources="clr-namespace:CollectionLib.Resources"
-    x:Class="CollectionLib.Controls.CollectionListViewBase">
+    x:Class="CollectionLib.Controls.CollectionListViewBase"
+    x:Name="Root" x:FieldModifier="protected"
+    BackgroundColor="Transparent">
 
     <ContentView.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <resources:CollectionPopupStyles />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+            <Color x:Key="ListSurfaceLight">#FFFCFA</Color>
+            <Color x:Key="ListSurfaceDark">#24272D</Color>
+            <Color x:Key="ListBorderLight">#E1E4E8</Color>
+            <Color x:Key="ListBorderDark">#41464F</Color>
+            <Color x:Key="ListTextLight">#20242A</Color>
+            <Color x:Key="ListTextDark">#F1F3F5</Color>
+            <Color x:Key="ListMutedLight">#68717D</Color>
+            <Color x:Key="ListMutedDark">#A7AFBA</Color>
+        <ResourceDictionary.MergedDictionaries><resources:CollectionPopupStyles /></ResourceDictionary.MergedDictionaries></ResourceDictionary>
     </ContentView.Resources>
+
+    <Grid x:Name="LayoutRoot" x:FieldModifier="protected" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Image
+                x:Name="HeaderIcon" x:FieldModifier="protected"
+                WidthRequest="28"
+                HeightRequest="28"
+                Aspect="AspectFit"
+                VerticalOptions="Center"
+                IsVisible="False" />
+
+            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                <Label
+                    x:Name="HeaderTitle" x:FieldModifier="protected"
+                    Text="{Binding Title, Source={x:Reference Root}}"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    LineBreakMode="TailTruncation"
+                    TextColor="{AppThemeBinding Light={StaticResource ListTextLight}, Dark={StaticResource ListTextDark}}" />
+                <Label
+                    x:Name="HeaderDockTitle" x:FieldModifier="protected"
+                    Text="{Binding DockTitleText, Source={x:Reference Root}}"
+                    FontSize="11"
+                    LineBreakMode="TailTruncation"
+                    TextColor="{AppThemeBinding Light={StaticResource ListMutedLight}, Dark={StaticResource ListMutedDark}}"
+                    IsVisible="False" />
+                <HorizontalStackLayout
+                    x:Name="AppliedIndicators" x:FieldModifier="protected"
+                    Spacing="6"
+                    VerticalOptions="Center"
+                    HorizontalOptions="Start" />
+            </VerticalStackLayout>
+
+            <HorizontalStackLayout Grid.Column="2" Spacing="3" VerticalOptions="Center">
+                <ImageButton x:Name="SearchButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                <ImageButton x:Name="SortButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                <ImageButton x:Name="FilterButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                <ImageButton x:Name="GroupButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                <ImageButton x:Name="ViewButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                <ImageButton x:Name="ClearHistoryButton" x:FieldModifier="protected" WidthRequest="34" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+            </HorizontalStackLayout>
+        </Grid>
+
+
+
+        <ContentView Grid.Row="1" Content="{Binding AdditionalHeaderContent, Source={x:Reference Root}}" />
+        <Grid x:Name="SearchHost" x:FieldModifier="protected" Grid.Row="2" IsVisible="False" RowDefinitions="Auto,Auto" RowSpacing="5">
+            <Border
+                x:Name="SearchInputBorder" x:FieldModifier="protected"
+                Padding="6,3"
+                Stroke="{AppThemeBinding Light={StaticResource ListBorderLight}, Dark={StaticResource ListBorderDark}}"
+                StrokeThickness="1"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=#292D34}">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="3">
+                    <Entry
+                        x:Name="SearchEntry" x:FieldModifier="protected"
+                        Placeholder="Поиск сообщений…"
+                        ClearButtonVisibility="Never"
+                        FontSize="13"
+                        HeightRequest="36"
+                        MinimumHeightRequest="36"
+                        BackgroundColor="Transparent">
+                        <Entry.GestureRecognizers>
+                            <TapGestureRecognizer Buttons="Secondary" />
+                        </Entry.GestureRecognizers>
+                    </Entry>
+                    <ImageButton x:Name="SearchClearButton" x:FieldModifier="protected" Grid.Column="1" WidthRequest="30" HeightRequest="32" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" IsVisible="False" />
+                    <ImageButton x:Name="SearchOptionsButton" x:FieldModifier="protected" Grid.Column="2" WidthRequest="32" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                    <ImageButton x:Name="SearchModeButton" x:FieldModifier="protected" Grid.Column="3" WidthRequest="32" HeightRequest="34" Padding="7" BackgroundColor="Transparent" BorderWidth="0" Aspect="AspectFit" />
+                    <Border x:Name="SearchAccuracyButton" x:FieldModifier="protected" Grid.Column="4" WidthRequest="48" HeightRequest="34" Padding="3,0" StrokeThickness="0" BackgroundColor="Transparent" IsVisible="False">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="7" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="18,*" ColumnSpacing="2" VerticalOptions="Center">
+                            <Image x:Name="SearchAccuracyIcon" x:FieldModifier="protected" Grid.Column="0" WidthRequest="17" HeightRequest="17" HorizontalOptions="Center" VerticalOptions="Center" Aspect="AspectFit" />
+                            <Label x:Name="SearchAccuracyValue" x:FieldModifier="protected" Grid.Column="1" FontSize="12" FontAttributes="Bold" VerticalTextAlignment="Center" HorizontalTextAlignment="Center" TextColor="{AppThemeBinding Light=#475569, Dark=#D6DEE8}" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="SearchCaseButtonBorder" x:FieldModifier="protected" Grid.Column="5" WidthRequest="34" HeightRequest="34" Padding="0" Stroke="Transparent" StrokeThickness="1" BackgroundColor="Transparent">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="7" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer />
+                        </Border.GestureRecognizers>
+                        <Image x:Name="SearchCaseButton" x:FieldModifier="protected" WidthRequest="18" HeightRequest="18" HorizontalOptions="Center" VerticalOptions="Center" Aspect="AspectFit" />
+                    </Border>
+                </Grid>
+            </Border>
+            <HorizontalStackLayout
+                x:Name="SearchFieldsStrip" x:FieldModifier="protected"
+                Grid.Row="1"
+                Spacing="5"
+                HorizontalOptions="Start"
+                VerticalOptions="Center" />
+        </Grid>
+
+        <Border x:Name="ListViewportBorder" x:FieldModifier="protected" Grid.Row="3" Padding="6" Stroke="{AppThemeBinding Light={StaticResource ListBorderLight}, Dark={StaticResource ListBorderDark}}" StrokeThickness="1" BackgroundColor="{AppThemeBinding Light={StaticResource ListSurfaceLight}, Dark={StaticResource ListSurfaceDark}}">
+            <Grid>
+                <Image
+                    x:Name="ListBackgroundImage" x:FieldModifier="protected"
+                    Aspect="AspectFill"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill"
+                    IsVisible="False"
+                    InputTransparent="True"
+                    ZIndex="0" />
+                <ScrollView x:Name="MessagesScroll" x:FieldModifier="protected" VerticalOptions="Fill" BackgroundColor="Transparent" ZIndex="1">
+                    <VerticalStackLayout
+                    x:Name="MessagesHost" x:FieldModifier="protected"
+                    BackgroundColor="Transparent"
+                    Spacing="7"
+                    Padding="2"
+                    VerticalOptions="Start">
+                    <Label
+                        x:Name="EmptyStateLabel" x:FieldModifier="protected"
+                        Text="Нет сообщений"
+                        HorizontalOptions="Center"
+                        Margin="8,20"
+                        TextColor="{AppThemeBinding Light={StaticResource ListMutedLight}, Dark={StaticResource ListMutedDark}}"
+                        IsVisible="False" />
+                    </VerticalStackLayout>
+                    <ScrollView.GestureRecognizers>
+                        <TapGestureRecognizer Buttons="Secondary" />
+                    </ScrollView.GestureRecognizers>
+                </ScrollView>
+            </Grid>
+        </Border>
+
+        <Grid
+            x:Name="PopupLayer" x:FieldModifier="protected"
+            Grid.RowSpan="4"
+            IsVisible="False"
+            ZIndex="100"
+            BackgroundColor="Transparent">
+            <BoxView Color="#22000000">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </BoxView.GestureRecognizers>
+            </BoxView>
+            <Border
+                x:Name="PopupPanel" x:FieldModifier="protected"
+                HorizontalOptions="End"
+                VerticalOptions="Start"
+                Margin="0,38,4,4"
+                Padding="12"
+                WidthRequest="320"
+                MaximumHeightRequest="480"
+                Stroke="{AppThemeBinding Light={StaticResource ListBorderLight}, Dark={StaticResource ListBorderDark}}"
+                StrokeThickness="1"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=#292D34}"
+                Opacity="0"
+                Scale="0.97">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
+                <ScrollView>
+                    <VerticalStackLayout x:Name="PopupContent" x:FieldModifier="protected" Spacing="8" />
+                </ScrollView>
+            </Border>
+        </Grid>
+    </Grid>
 </ContentView>

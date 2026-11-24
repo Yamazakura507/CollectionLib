@@ -27,11 +27,33 @@ The base class provides observable source items, ordered sorting, filter/search/
 - cycling sort direction, choosing the sort algorithm and reordering sort priority;
 - enabling, clearing and reordering hierarchical grouping levels.
 
-It implements `ICollectionListViewController`, which can be assigned to `CollectionListViewBase.ViewController`. The base control exposes `ItemCount`, `HasSearch`, `HasFilters`, `HasSorting` and `HasGrouping`, and notifies a derived control through `OnViewControllerStateChanged()`.
+It implements `ICollectionListViewController`. A typed `CollectionListView<T...>` creates and owns its controller when `ItemsSource` changes; `CollectionListViewBase.ViewController` remains available for lower-level scenarios. The shared UI exposes `ItemCount`, `HasSearch`, `HasFilters`, `HasSorting` and `HasGrouping`.
 
 ## Shared MAUI control infrastructure
 
-Derive a list control from `CollectionListViewBase`. The base owns reusable bindable presentation properties:
+Use `CollectionListViewBase` as the XAML layout layer and derive a typed control from `CollectionListView<T...>`:
+
+```csharp
+public sealed class ProductListView : CollectionListView<
+    Product, ProductFilter, ProductSearch, ProductGroup, ProductSort,
+    ProductFilterRule, ProductSearchRule, ProductGroupRule, ProductSortRule>
+{
+    public ProductListView()
+        : base(searchParameters, sortParameters, filterParameters, groupParameters,
+               GetSearchName, GetSortName, GetFilterName, GetGroupName, FormatGroupValue)
+    {
+        InitializeComponent();
+    }
+
+    protected override View CreateItemView(Product item) => new ProductRow { Item = item };
+}
+```
+
+The generic control owns the `ItemsSource` binding, controller and collection subscriptions, item-view cache, flat/grouped rendering, search/sort/filter/group menus, popup lifecycle, applied-state indicators and common background settings. It wraps each domain view in the shared background surface. Override `WrapItemView(...)` only when a domain item needs extra actions such as swipe or delete.
+
+The domain control supplies its enum/rule types, parameter lists, display-name/value selectors and the item-view factory. Optional hooks add domain-specific filter fields or popup entries without rebuilding standard menus. A domain-specific header strip can be injected through `AdditionalHeaderContent`.
+
+The non-generic base owns reusable bindable presentation properties:
 
 - `Title`, `Icon`, `DockTitleText`;
 - `SearchEffect` (`CollectionSearchEffect`);
@@ -41,9 +63,9 @@ Derive a list control from `CollectionListViewBase`. The base owns reusable bind
 - `ListBackgroundMode` (`CollectionListBackgroundMode`), `ListBackgroundColor`, `ListBackgroundImageSource`;
 - `ViewController`.
 
-The base control owns the behavior behind these settings. It executes the common search-panel and group expand/collapse animations, resolves item and viewport background colors, and applies image, custom, base and transparent background modes to registered visual surfaces. A derived control supplies its own XAML elements through `ConfigureListBackground(...)`, registers item surfaces through `RegisterItemBackgroundSurface(...)`, and unregisters them when they are discarded.
+The base control owns the behavior behind these settings. It executes common search-panel and group expand/collapse animations, resolves item and viewport background colors, and applies image, custom, base and transparent background modes. `CollectionListView<T...>` automatically wraps and registers item surfaces. A derived component calls `ConfigureListBackground(...)` once for its shared viewport and `RegisterThemedBackgroundSurface(...)` only for additional domain-specific surfaces.
 
-`GroupDisplayMode` is also a shared bindable property. When it changes, the base refreshes automatic item backgrounds and calls `OnGroupDisplayModeChanged()`; the derived control only rebuilds its domain-specific group templates. For example, `MessageListView` still constructs the message block and connected-line trees because those templates consume `MessageGroup`, but it no longer owns the setting or the generic transition/background algorithms.
+`GroupDisplayMode` is a shared bindable property. When it changes, the base refreshes automatic item backgrounds and calls `OnGroupDisplayModeChanged()`. The base also owns the generic block and connected-line group renderers, recursive group counting, tree connectors and expansion transitions. These renderers consume `GroupNode<TItem, TGroupParameter>`; the derived control supplies only the item-view factory and group-parameter label/value formatters. Shared chevrons are resolved through CollectionLib's resource keys.
 
 The common popup building APIs are also available to subclasses:
 

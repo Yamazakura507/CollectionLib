@@ -1,5 +1,13 @@
+using System.Collections.Specialized;
+using System.ComponentModel;
+using CollectionLib.Collections;
+using CollectionLib.Controllers;
 using CollectionLib.Enums;
 using CollectionLib.Extensions;
+using SortLib.Models;
+using WhereLib.Models;
+using GroupLib.Models;
+using Microsoft.Maui.Controls.Shapes;
 using CollectionLib.Interfaces;
 using CollectionLib.Models;
 using CollectionLib.Models.Popup;
@@ -17,6 +25,9 @@ public abstract partial class CollectionListViewBase : ContentView
 
     private readonly HashSet<VisualElement> itemBackgroundSurfaces = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<VisualElement> transitioningGroups = new(ReferenceEqualityComparer.Instance);
+    private INotifyCollectionChanged? observedSourceCollection;
+    private INotifyCollectionChanged? observedFilteredItems;
+    private INotifyPropertyChanged? observedSourceProperties;
     private Border? listViewportBorder;
     private Image? listBackgroundImage;
     private List<(VisualElement Element, Color Light, Color Dark)> themedBackgroundSurfaces = [];
@@ -57,6 +68,16 @@ public abstract partial class CollectionListViewBase : ContentView
     /// </summary>
     protected Color PopupDividerColor => 
         Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#3E444E") : Color.FromArgb("#E7EAF0");
+
+    /// <summary>
+    /// Gets or sets optional content inserted between the shared toolbar and search panel.
+    /// Derived controls can use this slot for domain-specific filters or selectors.
+    /// </summary>
+    public View? AdditionalHeaderContent
+    {
+        get => (View?)GetValue(AdditionalHeaderContentProperty);
+        set => SetValue(AdditionalHeaderContentProperty, value);
+    }
 
     /// <summary>
     /// Gets or sets the controller that supplies this list's shared search, filter, sort and group state.
@@ -192,6 +213,12 @@ public abstract partial class CollectionListViewBase : ContentView
     }
 
     /// <summary>
+    /// Identifies the <see cref="AdditionalHeaderContent"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty AdditionalHeaderContentProperty =
+        BindableProperty.Create(nameof(AdditionalHeaderContent), typeof(View), typeof(CollectionListViewBase), default(View));
+
+    /// <summary>
     /// Identifies the <see cref="ViewController"/> bindable property.
     /// </summary>
     public static readonly BindableProperty ViewControllerProperty =
@@ -304,12 +331,398 @@ public abstract partial class CollectionListViewBase : ContentView
                 control.OnListBackgroundConfigurationChanged();
             });
 
+    private sealed class RoundedTreeConnectorDrawable(Color color, bool isLast) : IDrawable
+    {
+        public void Draw(ICanvas canvas, RectF dirtyRect)
+        {
+            if (dirtyRect.Width <= 0 || dirtyRect.Height <= 0) return;
+
+            float spineX = Math.Min(8.5f, dirtyRect.Width * 0.38f);
+            float targetX = Math.Max(spineX + 8, dirtyRect.Width - 1);
+            float junctionY = Math.Min(17f, Math.Max(10f, dirtyRect.Height * 0.45f));
+
+            canvas.StrokeColor = color;
+            canvas.StrokeSize = 1.7f;
+            canvas.StrokeLineCap = LineCap.Round;
+            canvas.StrokeLineJoin = LineJoin.Round;
+
+            PathF spine = new();
+
+            spine.MoveTo(spineX, 0);
+            spine.LineTo(spineX, isLast ? junctionY : dirtyRect.Height);
+            canvas.DrawPath(spine);
+
+            PathF branch = new();
+
+            branch.MoveTo(spineX, junctionY);
+            branch.QuadTo(spineX + 5.5f, junctionY + 1.5f, targetX, junctionY);
+            canvas.DrawPath(branch);
+        }
+    }
+
+    /// <summary>
+    /// Creates a nested block-style group view from the shared GroupNode model.
+    /// Item creation, group labels and chevron resources are supplied by the derived list.
+    /// </summary>
+    protected View CreateBlockGroupView<TItem, TParameter>(
+        GroupNode<TItem, TParameter> group,
+        int depth,
+        Func<TItem, View> createItemView,
+        Func<TParameter, string> getParameterName,
+        Func<TParameter, object?, string> formatGroupValue,
+        Func<bool, ImageSource> getChevron)
+        where TParameter : struct, Enum
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(createItemView);
+        ArgumentNullException.ThrowIfNull(getParameterName);
+        ArgumentNullException.ThrowIfNull(formatGroupValue);
+        ArgumentNullException.ThrowIfNull(getChevron);
+
+        VerticalStackLayout container = new()
+        {
+            Spacing = 5,
+            Margin = new Thickness(depth * 9, 1, 0, 2)
+        };
+
+        int count = CountGroupItems(group);
+        string title = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}  ·  {count}";
+        Grid headerContent = new()
+        {
+            ColumnDefinitions = new ColumnDefinitionCollection { new(GridLength.Auto), new(GridLength.Star) },
+            ColumnSpacing = 7
+        };
+        Image chevron = new()
+        {
+            Source = getChevron(true),
+            WidthRequest = 15,
+            HeightRequest = 15,
+            VerticalOptions = LayoutOptions.Center,
+            Aspect = Aspect.AspectFit
+        };
+        Label groupTitle = new()
+        {
+            Text = title,
+            FontSize = 12,
+            FontAttributes = FontAttributes.Bold,
+            VerticalTextAlignment = TextAlignment.Center,
+            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#E6EAF0") : Color.FromArgb("#394351")
+        };
+        headerContent.Children.Add(chevron);
+        Grid.SetColumn(groupTitle, 1);
+        headerContent.Children.Add(groupTitle);
+
+        Border header = new()
+        {
+            HorizontalOptions = LayoutOptions.Fill,
+            Padding = new Thickness(9, 6),
+            StrokeThickness = 0,
+            BackgroundColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#343A44") : Color.FromArgb("#EEF1F5"),
+            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            Content = headerContent
+        };
+
+        VerticalStackLayout children = new() { Spacing = 6, Margin = new Thickness(10, 1, 0, 3) };
+
+        foreach (GroupNode<TItem, TParameter> nested in group.Children)
+            children.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
+        foreach (TItem item in group.Items) children.Children.Add(createItemView(item));
+
+        header.GestureRecognizers.Add(new TapGestureRecognizer
+        {
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(children, expand =>
+            {
+                chevron.Source = getChevron(expand);
+                ToolTipProperties.SetText(header, expand ? "Свернуть группу" : "Развернуть группу");
+            }))
+        });
+        ToolTipProperties.SetText(header, "Свернуть группу");
+        container.Children.Add(header);
+        container.Children.Add(children);
+        return container;
+    }
+
+    /// <summary>
+    /// Creates a connected-line group view from the shared GroupNode model.
+    /// Item creation, group labels and chevron resources are supplied by the derived list.
+    /// </summary>
+    protected View CreateLineGroupView<TItem, TParameter>(
+        GroupNode<TItem, TParameter> group,
+        int depth,
+        bool isLast,
+        Func<TItem, View> createItemView,
+        Func<TParameter, string> getParameterName,
+        Func<TParameter, object?, string> formatGroupValue,
+        Func<bool, ImageSource> getChevron)
+        where TParameter : struct, Enum
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(createItemView);
+        ArgumentNullException.ThrowIfNull(getParameterName);
+        ArgumentNullException.ThrowIfNull(formatGroupValue);
+        ArgumentNullException.ThrowIfNull(getChevron);
+
+        Color lineColor = GetTreeLineColor(depth);
+        int count = CountGroupItems(group);
+        string title = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}";
+
+        Grid layout = new()
+        {
+            ColumnDefinitions = new ColumnDefinitionCollection { new(new GridLength(22)), new(GridLength.Star) },
+            RowDefinitions = new RowDefinitionCollection { new(GridLength.Auto), new(GridLength.Auto) },
+            ColumnSpacing = 0,
+            RowSpacing = 0,
+            Margin = new Thickness(depth * 3, 0, 0, 2)
+        };
+
+        GraphicsView connector = new()
+        {
+            WidthRequest = 22,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            Drawable = new RoundedTreeConnectorDrawable(lineColor, isLast),
+            InputTransparent = true
+        };
+        Grid.SetRowSpan(connector, 2);
+        layout.Children.Add(connector);
+
+        Image chevron = new()
+        {
+            Source = getChevron(true),
+            WidthRequest = 14,
+            HeightRequest = 14,
+            VerticalOptions = LayoutOptions.Center,
+            Aspect = Aspect.AspectFit
+        };
+        Label groupTitle = new()
+        {
+            Text = title,
+            FontSize = 12,
+            FontAttributes = FontAttributes.Bold,
+            VerticalTextAlignment = TextAlignment.Center,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark
+                ? Color.FromArgb("#E9EEF5")
+                : Color.FromArgb("#344256")
+        };
+        Border countBadge = new()
+        {
+            Padding = new Thickness(7, 2),
+            BackgroundColor = Colors.Transparent,
+            StrokeThickness = 0,
+            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            VerticalOptions = LayoutOptions.Center,
+            Content = new Label
+            {
+                Text = count.ToString(),
+                FontSize = 10,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#DCE7F4") : Color.FromArgb("#52647B"),
+                VerticalTextAlignment = TextAlignment.Center
+            }
+        };
+
+        Grid headerContent = new()
+        {
+            ColumnDefinitions = new ColumnDefinitionCollection { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) },
+            ColumnSpacing = 8,
+            VerticalOptions = LayoutOptions.Center
+        };
+        headerContent.Children.Add(chevron);
+        Grid.SetColumn(groupTitle, 1);
+        headerContent.Children.Add(groupTitle);
+        Grid.SetColumn(countBadge, 2);
+        headerContent.Children.Add(countBadge);
+
+        Border header = new()
+        {
+            Padding = new Thickness(9, 6),
+            Stroke = Colors.Transparent,
+            StrokeThickness = 0,
+            BackgroundColor = Colors.Transparent,
+            StrokeShape = new RoundRectangle { CornerRadius = 10 },
+            Content = headerContent
+        };
+        Grid.SetColumn(header, 1);
+        layout.Children.Add(header);
+
+        VerticalStackLayout children = new()
+        {
+            Spacing = 3,
+            Padding = new Thickness(0, 4, 0, 4),
+            IsVisible = true
+        };
+
+        int childCount = group.Children.Count + group.Items.Count;
+        int childIndex = 0;
+        foreach (GroupNode<TItem, TParameter> nested in group.Children)
+        {
+            children.Children.Add(CreateLineGroupView(
+                nested, depth + 1, childIndex == childCount - 1,
+                createItemView, getParameterName, formatGroupValue, getChevron));
+            childIndex++;
+        }
+        foreach (TItem item in group.Items)
+        {
+            children.Children.Add(CreateLineItemRow(item, depth + 1, childIndex == childCount - 1, createItemView));
+            childIndex++;
+        }
+
+        Grid.SetColumn(children, 1);
+        Grid.SetRow(children, 1);
+        layout.Children.Add(children);
+        header.GestureRecognizers.Add(new TapGestureRecognizer
+        {
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(children, expand =>
+            {
+                chevron.Source = getChevron(expand);
+                ToolTipProperties.SetText(header, expand ? "Свернуть группу" : "Развернуть группу");
+            }))
+        });
+        ToolTipProperties.SetText(header, "Свернуть группу");
+
+        return layout;
+    }
+
+    private View CreateLineItemRow<TItem>(TItem item, int depth, bool isLast, Func<TItem, View> createItemView)
+    {
+        Grid row = new()
+        {
+            ColumnDefinitions = new ColumnDefinitionCollection { new(new GridLength(22)), new(GridLength.Star) },
+            ColumnSpacing = 0,
+            MinimumHeightRequest = 42
+        };
+        GraphicsView connector = new()
+        {
+            WidthRequest = 22,
+            HeightRequest = 42,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast),
+            InputTransparent = true
+        };
+
+        row.Children.Add(connector);
+
+        View itemView = createItemView(item);
+
+        Grid.SetColumn(itemView, 1);
+        row.Children.Add(itemView);
+
+        return row;
+    }
+
+    private static int CountGroupItems<TItem, TParameter>(GroupNode<TItem, TParameter> group)
+        where TParameter : struct, Enum => group.Items.Count + group.Children.Sum(CountGroupItems);
+
+    private static Color GetTreeLineColor(int depth)
+    {
+        string[] darkPalette = ["#8FA7C5", "#7DAFAD", "#A89BC7"];
+        string[] lightPalette = ["#7797BF", "#70A39D", "#9888BA"];
+        string[] palette = Application.Current?.RequestedTheme == AppTheme.Dark ? darkPalette : lightPalette;
+
+        return Color.FromArgb(palette[depth % palette.Length]);
+    }
+
+    /// <summary>
+    /// Creates and attaches the generic controller for a collection and owns its change subscriptions.
+    /// </summary>
+    protected CollectionViewController<
+        TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
+        TFilterRule, TSearchRule, TGroupRule, TSortRule> AttachCollectionSource<
+        TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
+        TFilterRule, TSearchRule, TGroupRule, TSortRule>(
+        CollectionViewCollection<
+            TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
+            TFilterRule, TSearchRule, TGroupRule, TSortRule> source,
+        IEnumerable<TSortParameter> sortParameters,
+        IEnumerable<TGroupParameter> groupParameters,
+        IEnumerable<TSearchParameter> searchParameters)
+        where TItem : class, INotifyPropertyChanged
+        where TFilterParameter : struct, Enum
+        where TSearchParameter : struct, Enum
+        where TGroupParameter : struct, Enum
+        where TSortParameter : struct, Enum
+        where TFilterRule : FilterRule<TFilterParameter>, new()
+        where TSearchRule : SearchRule<TSearchParameter>, new()
+        where TGroupRule : GroupRule<TGroupParameter>, new()
+        where TSortRule : SortRule<TSortParameter>, new()
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(sortParameters);
+        ArgumentNullException.ThrowIfNull(groupParameters);
+        ArgumentNullException.ThrowIfNull(searchParameters);
+
+        DetachCollectionSource();
+
+        CollectionViewController<
+            TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
+            TFilterRule, TSearchRule, TGroupRule, TSortRule> controller = new(
+                source, sortParameters, groupParameters, searchParameters);
+
+        observedSourceCollection = source;
+        observedFilteredItems = source.FilteredItems;
+        observedSourceProperties = source;
+
+        observedSourceCollection.CollectionChanged += SourceCollectionOnCollectionChanged;
+        observedFilteredItems.CollectionChanged += FilteredItemsOnCollectionChanged;
+        observedSourceProperties.PropertyChanged += SourceOnPropertyChanged;
+
+        ViewController = controller;
+        return controller;
+    }
+
+    /// <summary>
+    /// Detaches the current collection subscriptions and disposes its controller.
+    /// </summary>
+    protected void DetachCollectionSource()
+    {
+        if (observedSourceCollection is not null) observedSourceCollection.CollectionChanged -= SourceCollectionOnCollectionChanged;
+        if (observedFilteredItems is not null) observedFilteredItems.CollectionChanged -= FilteredItemsOnCollectionChanged;
+        if (observedSourceProperties is not null) observedSourceProperties.PropertyChanged -= SourceOnPropertyChanged;
+
+        observedSourceCollection = null;
+        observedFilteredItems = null;
+        observedSourceProperties = null;
+
+        ViewController?.Dispose();
+        ViewController = null;
+    }
+
+    private void SourceCollectionOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => DispatchToControl(() => OnCollectionSourceChanged(e));
+
+    private void FilteredItemsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => DispatchToControl(() => OnFilteredItemsChanged(e));
+
+    private void SourceOnPropertyChanged(object? sender, PropertyChangedEventArgs e) => DispatchToControl(() => OnCollectionSourcePropertyChanged(e));
+
+    private void DispatchToControl(Action action)
+    {
+        if (Dispatcher.IsDispatchRequired) Dispatcher.Dispatch(action);
+        else action();
+    }
+
+    /// <summary>
+    /// Called when the source collection changes.
+    /// </summary>
+    protected virtual void OnCollectionSourceChanged(NotifyCollectionChangedEventArgs e) { }
+
+    /// <summary>
+    /// Called when the filtered collection changes.
+    /// </summary>
+    protected virtual void OnFilteredItemsChanged(NotifyCollectionChangedEventArgs e) { }
+
+    /// <summary>
+    /// Called when a property on the source collection changes.
+    /// </summary>
+    protected virtual void OnCollectionSourcePropertyChanged(PropertyChangedEventArgs e) { }
+
     /// <summary>
     /// Registers an item surface so the base control can apply the configured background mode.
     /// </summary>
     protected void RegisterItemBackgroundSurface(VisualElement surface)
     {
         ArgumentNullException.ThrowIfNull(surface);
+
         itemBackgroundSurfaces.Add(surface);
         ApplyItemBackground(surface);
     }
@@ -345,6 +758,17 @@ public abstract partial class CollectionListViewBase : ContentView
         listBackgroundImage = backgroundImage;
         themedBackgroundSurfaces = themeSurfaces?.ToList() ?? [];
         transparentBackgroundSurfaces = transparentSurfaces ?? [];
+
+        ApplyListBackgroundConfiguration();
+    }
+
+    /// <summary>
+    /// Registers an additional domain-specific surface whose background follows the shared list theme.
+    /// </summary>
+    protected void RegisterThemedBackgroundSurface(VisualElement surface, Color light, Color dark)
+    {
+        ArgumentNullException.ThrowIfNull(surface);
+        themedBackgroundSurfaces.Add((surface, light, dark));
         ApplyListBackgroundConfiguration();
     }
 
@@ -490,6 +914,7 @@ public abstract partial class CollectionListViewBase : ContentView
             children.TranslationY = 0;
             children.Scale = 1;
             children.IsVisible = expand;
+
             transitioningGroups.Remove(children);
             onExpandedChanged?.Invoke(expand);
         }
@@ -543,6 +968,7 @@ public abstract partial class CollectionListViewBase : ContentView
     {
         CollectionPopupSectionVisual section = 
             CollectionListPopupBuilder.CreateSection(title, buildContent, chevronSource, initiallyExpanded, addDivider, isAvailable);
+        
         section.RefreshVisibility();
 
         return section;
@@ -758,6 +1184,7 @@ public abstract partial class CollectionListViewBase : ContentView
     private static void OnGroupDisplayModeChanged(BindableObject bindable, object oldValue, object newValue)
     {
         CollectionListViewBase control = (CollectionListViewBase)bindable;
+
         control.RefreshItemBackgroundSurfaces();
         control.OnGroupDisplayModeChanged();
     }
@@ -820,12 +1247,9 @@ public abstract partial class CollectionListViewBase : ContentView
         if (listViewportBorder is null || listBackgroundImage is null) return;
 
         Color baseColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#24272D") : Color.FromArgb("#FFFCFA");
-
         bool hasImageBackground = ListBackgroundMode == CollectionListBackgroundMode.Image && ListBackgroundImageSource is not null;
 
-        listViewportBorder.BackgroundColor = hasImageBackground
-            ? Colors.Transparent
-            : ListBackgroundMode switch
+        listViewportBorder.BackgroundColor = hasImageBackground ? Colors.Transparent : ListBackgroundMode switch
             {
                 CollectionListBackgroundMode.Transparent => Colors.Transparent,
                 CollectionListBackgroundMode.Custom => ListBackgroundColor,
