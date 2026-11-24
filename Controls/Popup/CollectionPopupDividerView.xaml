@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<BoxView
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:resources="clr-namespace:CollectionLib.Resources"
+    x:Class="CollectionLib.Controls.Popup.CollectionPopupDividerView"
+    HeightRequest="1"
+    HorizontalOptions="Fill"
+    Margin="27,0,0,0">
+    <BoxView.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </BoxView.Resources>
+</BoxView>

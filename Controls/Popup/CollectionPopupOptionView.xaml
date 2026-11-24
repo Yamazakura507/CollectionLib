@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<VerticalStackLayout
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:popup="clr-namespace:CollectionLib.Controls.Popup"
+    xmlns:resources="clr-namespace:CollectionLib.Resources"
+    x:Class="CollectionLib.Controls.Popup.CollectionPopupOptionView"
+    Spacing="0"
+    Padding="0">
+
+    <VerticalStackLayout.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </VerticalStackLayout.Resources>
+
+    <Grid
+        x:Name="OptionRow"
+        ColumnDefinitions="Auto,*"
+        ColumnSpacing="9"
+        Padding="3,6"
+        MinimumHeightRequest="34"
+        BackgroundColor="Transparent">
+        <Image
+            x:Name="OptionStateIcon"
+            WidthRequest="17"
+            HeightRequest="17"
+            Margin="1,0,0,0"
+            VerticalOptions="Center"
+            Aspect="AspectFit" />
+        <Label
+            x:Name="OptionLabel"
+            Grid.Column="1"
+            Style="{StaticResource CollectionPopupOptionLabelStyle}" />
+    </Grid>
+
+    <popup:CollectionPopupDividerView x:Name="OptionDivider" Indent="True" />
+</VerticalStackLayout>

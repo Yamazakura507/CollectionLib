@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Grid
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:resources="clr-namespace:CollectionLib.Resources"
+    x:Class="CollectionLib.Controls.Popup.CollectionPopupCommandView"
+    ColumnDefinitions="Auto,*"
+    ColumnSpacing="10"
+    Padding="5,7">
+
+    <Grid.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Grid.Resources>
+
+    <Image
+        x:Name="CommandIcon"
+        WidthRequest="19"
+        HeightRequest="19"
+        VerticalOptions="Center"
+        Aspect="AspectFit" />
+    <Label
+        x:Name="CommandLabel"
+        Grid.Column="1"
+        Style="{StaticResource CollectionPopupCommandLabelStyle}" />
+</Grid>

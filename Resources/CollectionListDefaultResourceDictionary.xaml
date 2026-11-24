@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:resources="clr-namespace:ResourcesLib.Models;assembly=ResourcesLib"
+    x:Class="CollectionLib.Resources.CollectionListDefaultResourceDictionary">
+
+    <x:String x:Key="CollectionLib.Images.List.Search">list_search.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Sort">list_sort.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Filter">list_filter.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Group">list_group.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.View">list_view.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Image">list_image.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.SearchOptions">list_search_options.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.SearchModeText">list_search_text.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.SearchModeFuzzy">list_search_fuzzy.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.SearchAccuracy">list_search_accuracy.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.SearchCase">list_search_case.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.More">list_more.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Close">list_close.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Back">list_back.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Reset">list_reset.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.ChevronDown">list_chevron_down.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.ChevronRight">list_chevron_right.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.Delete">list_delete.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.ClearHistory">list_clear_history.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateEnabled">list_state_enabled.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateDisabled">list_state_disabled.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateAll">list_state_all.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateYes">list_state_yes.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateNo">list_state_no.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateAscending">list_state_ascending.png</x:String>
+    <x:String x:Key="CollectionLib.Images.List.StateDescending">list_state_descending.png</x:String>
+
+    <resources:LottieResourceSettings
+        x:Key="CollectionLib.Lotties.Close"
+        Source="Lotties/close.json"
+        RestingProgress="1"
+        Speed="1"
+        IsReversed="False" />
+</ResourceDictionary>
