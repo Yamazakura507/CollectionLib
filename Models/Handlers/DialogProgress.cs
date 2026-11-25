@@ -1,4 +1,6 @@
-﻿namespace CollectionLib.Models.Handlers
+﻿using System.Diagnostics;
+
+namespace CollectionLib.Models.Handlers
 {
     internal sealed class DialogProgress : IProgress<Message>
     {
