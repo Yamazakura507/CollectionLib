@@ -35,15 +35,9 @@ public abstract partial class CollectionListView<
     }
 
     private readonly Dictionary<TSearchParameter, Color> searchParameterColors = [];
-    private static readonly Color[] SearchParameterPalette =
-    [
-        Color.FromArgb("#4387C7"),
-        Color.FromArgb("#269B83"),
-        Color.FromArgb("#9A70C8"),
-        Color.FromArgb("#C17A43"),
-        Color.FromArgb("#C15E7A"),
-        Color.FromArgb("#6D8E45")
-    ];
+    private static readonly Color[] SearchParameterPalette = CollectionListColors.GetPalette(
+        "SearchAccent1", "SearchAccent2", "SearchAccent3",
+        "SearchAccent4", "SearchAccent5", "SearchAccent6");
 
     protected bool isSearchVisible;
     protected bool isSearchSettingsOpen;
@@ -167,7 +161,7 @@ public abstract partial class CollectionListView<
 
     private void ClearHistoryButtonOnClicked(object? sender, EventArgs e) => _ = ClearHistoryAsync();
 
-    private async Task ClearHistoryAsync()
+    private async ValueTask ClearHistoryAsync()
     {
         if (ItemsSource is null || ItemsSource.Count == 0) return;
 
@@ -315,7 +309,7 @@ public abstract partial class CollectionListView<
     private void SearchEntryOnFocused(object? sender, FocusEventArgs e)
     {
         isSearchActionPressed = false;
-        SearchInputBorder.Stroke = Color.FromArgb("#5987C8");
+        SearchInputBorder.Stroke = CollectionListColors.Get("Accent");
         SearchInputBorder.StrokeThickness = 1.5;
     }
 
@@ -332,7 +326,7 @@ public abstract partial class CollectionListView<
 
     private void SearchActionButtonOnPressed(object? sender, EventArgs e) => isSearchActionPressed = true;
 
-    private async Task RestoreSearchEntryFocusAsync()
+    private async ValueTask RestoreSearchEntryFocusAsync()
     {
         if (!isSearchVisible) return;
 
@@ -350,8 +344,10 @@ public abstract partial class CollectionListView<
     {
         if (ItemsSource is null) return;
 
-        viewController?.SetSearchMode(ItemsSource.SearchOptions.Mode == SearchMode.Contains ? SearchMode.Levenshtein : SearchMode.Contains);
+        viewController?.SetSearchMode(
+            ItemsSource.SearchOptions.Mode == SearchMode.Contains ? SearchMode.Levenshtein : SearchMode.Contains);
         UpdateSearchSettingsVisuals();
+
         _ = RestoreSearchEntryFocusAsync();
     }
 
@@ -363,6 +359,7 @@ public abstract partial class CollectionListView<
 
         viewController?.SetMaximumLevenshteinDistance((ItemsSource.SearchOptions.MaxLevenshteinDistance + 1) % 9);
         UpdateSearchSettingsVisuals();
+
         _ = RestoreSearchEntryFocusAsync();
     }
 
@@ -372,6 +369,7 @@ public abstract partial class CollectionListView<
 
         viewController?.ToggleCaseSensitivity();
         UpdateSearchSettingsVisuals();
+
         _ = RestoreSearchEntryFocusAsync();
     }
 
@@ -381,8 +379,8 @@ public abstract partial class CollectionListView<
         int accuracy = ItemsSource?.SearchOptions.MaxLevenshteinDistance ?? 2;
         bool caseSensitive = ItemsSource?.SearchOptions.IsCaseSensitive ?? false;
 
-        SearchModeButton.Source = mode == SearchMode.Contains 
-            ? GetIcon(CollectionListImageKeys.ListSearchModeText, "list_search_text.svg") 
+        SearchModeButton.Source = mode == SearchMode.Contains
+            ? GetIcon(CollectionListImageKeys.ListSearchModeText, "list_search_text.svg")
             : GetIcon(CollectionListImageKeys.ListSearchModeFuzzy, "list_search_fuzzy.svg");
         SearchModeButton.Opacity = mode == SearchMode.Levenshtein ? 1 : 0.78;
         SearchAccuracyIcon.Source = GetIcon(CollectionListImageKeys.ListSearchAccuracy, "list_search_accuracy.svg");
@@ -392,9 +390,9 @@ public abstract partial class CollectionListView<
         SearchAccuracyButton.Opacity = 1;
         SearchCaseButton.Source = GetIcon(CollectionListImageKeys.ListSearchCase, "list_search_case.svg");
         SearchCaseButton.Opacity = caseSensitive ? 1 : 0.68;
-        SearchCaseButtonBorder.Stroke = caseSensitive ? Color.FromArgb("#5987C8") : Color.FromArgb("#00000000");
+        SearchCaseButtonBorder.Stroke = caseSensitive ? CollectionListColors.Get("Accent") : Colors.Transparent;
         SearchCaseButtonBorder.StrokeThickness = caseSensitive ? 1.25 : 1;
-        SearchCaseButtonBorder.BackgroundColor = caseSensitive ? Color.FromArgb("#205987C8") : Colors.Transparent;
+        SearchCaseButtonBorder.BackgroundColor = caseSensitive ? CollectionListColors.Get("CaseButtonAccentBackground") : Colors.Transparent;
 
         ToolTipProperties.SetText(SearchModeButton, mode == SearchMode.Contains ? "Тип поиска: Содержит" : "Тип поиска: Левенштейн");
         ToolTipProperties.SetText(SearchAccuracyButton, $"Допустимое расстояние: {accuracy}");

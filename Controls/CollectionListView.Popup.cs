@@ -25,8 +25,8 @@ public abstract partial class CollectionListView<
     protected ImageButton? clearSortButton;
     protected ImageButton? clearFilterButton;
     protected ImageButton? clearGroupButton;
-    protected VerticalStackLayout? itemColorPickerPanel;
-    protected VerticalStackLayout? listColorPickerPanel;
+    protected View? itemColorPickerPanel;
+    protected View? listColorPickerPanel;
     protected ListImagePickerView? listImagePickerPanel;
     protected Label? listImageStatusLabel;
 
@@ -140,11 +140,11 @@ public abstract partial class CollectionListView<
             showBack ? GetIcon(CollectionListImageKeys.ListBack, "list_back.svg") : null,
             GetIcon(CollectionListImageKeys.ListClose, "list_close.svg"));
 
-        header.Back.Clicked += (_, _) => ShowPopup(PopupKind.Central);
-        header.Close.Clicked += (_, _) => HidePopup();
+        header.BackButton.Clicked += (_, _) => ShowPopup(PopupKind.Central);
+        header.CloseButton.Clicked += (_, _) => HidePopup();
 
-        ToolTipProperties.SetText(header.Back, "Назад");
-        ToolTipProperties.SetText(header.Close, "Закрыть");
+        ToolTipProperties.SetText(header.BackButton, "Назад");
+        ToolTipProperties.SetText(header.CloseButton, "Закрыть");
         PopupContent.Children.Add(header);
     }
 
@@ -182,6 +182,7 @@ public abstract partial class CollectionListView<
         ImageButton button = CreateIconButton(CollectionListImageKeys.ListReset, "list_reset.svg", tooltip, 34);
         button.HorizontalOptions = LayoutOptions.End;
         button.Clicked += (_, _) => action();
+
         PopupContent.Children.Add(button);
 
         return button;
@@ -198,7 +199,7 @@ public abstract partial class CollectionListView<
             title, buildContent,
             expanded => GetIcon(
                 expanded ? CollectionListImageKeys.ListChevronDown : CollectionListImageKeys.ListChevronRight,
-                expanded ? "list_chevron_down.svg" : "list_chevron_right.svg"), 
+                expanded ? "list_chevron_down.svg" : "list_chevron_right.svg"),
             initiallyExpanded, addDivider, isAvailable);
 
         PopupContent.Children.Add(section.Container);
@@ -240,7 +241,7 @@ public abstract partial class CollectionListView<
         _ = ClosePopupAsync();
     }
 
-    private async Task ClosePopupAsync()
+    private async ValueTask ClosePopupAsync()
     {
         bool wasSearchSettings = isSearchSettingsOpen;
 

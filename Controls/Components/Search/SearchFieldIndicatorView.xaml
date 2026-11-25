@@ -1,17 +1,27 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="CollectionLib.Controls.Components.Search.SearchFieldIndicatorView">
+             x:Class="CollectionLib.Controls.Components.Search.SearchFieldIndicatorView" xmlns:resources="clr-namespace:CollectionLib.Resources">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentView.Resources>
+
     <Border x:Name="IndicatorBorder" 
-            Padding="9,3" 
-            HeightRequest="25" 
+            x:FieldModifier="internal"
+            Padding="9,3"
+            HeightRequest="25"
             StrokeThickness="1">
         <Border.StrokeShape>
             <RoundRectangle CornerRadius="8" />
         </Border.StrokeShape>
         <Label x:Name="IndicatorText" 
+               x:FieldModifier="internal"
                FontSize="10"
-               VerticalTextAlignment="Center" 
+               VerticalTextAlignment="Center"
                HorizontalTextAlignment="Center" />
     </Border>
 </ContentView>

@@ -4,9 +4,6 @@ public partial class PopupHeaderView : ContentView
 {
     public PopupHeaderView() => InitializeComponent();
 
-    public ImageButton Back => BackButton;
-    public ImageButton Close => CloseButton;
-
     public void Configure(string title, bool showBack, ImageSource? backIcon, ImageSource closeIcon)
     {
         TitleLabel.Text = title;

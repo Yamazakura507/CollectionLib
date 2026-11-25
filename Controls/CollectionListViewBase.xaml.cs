@@ -11,6 +11,8 @@ using CollectionLib.Interfaces;
 using CollectionLib.Models;
 using CollectionLib.Models.Popup;
 using CollectionLib.Controls.Components.Group;
+using CollectionLib.Resources.ExtensionResources;
+using CollectionLib.Models.Draw;
 
 namespace CollectionLib.Controls;
 
@@ -51,20 +53,17 @@ public abstract partial class CollectionListViewBase : ContentView
     /// <summary>
     /// Gets a theme-aware foreground color for popup text.
     /// </summary>
-    protected Color PopupTextColor => 
-        Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#F1F3F5") : Color.FromArgb("#252B33");
+    protected Color PopupTextColor => CollectionListColors.ForTheme("PopupTextLight", "PopupTextDark");
 
     /// <summary>
     /// Gets a theme-aware muted foreground color for secondary popup text.
     /// </summary>
-    protected Color PopupMutedColor => 
-        Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#ADB5C0") : Color.FromArgb("#68717D");
+    protected Color PopupMutedColor => CollectionListColors.ForTheme("PopupMutedLight", "PopupMutedDark");
 
     /// <summary>
     /// Gets a theme-aware color for popup separators.
     /// </summary>
-    protected Color PopupDividerColor => 
-        Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#3E444E") : Color.FromArgb("#E7EAF0");
+    protected Color PopupDividerColor => CollectionListColors.ForTheme("PopupDividerLight", "PopupDividerDark");
 
     /// <summary>
     /// Gets or sets optional content inserted between the shared toolbar and search panel.
@@ -183,6 +182,15 @@ public abstract partial class CollectionListViewBase : ContentView
     }
 
     /// <summary>
+    /// Custom item surface brush. A gradient takes precedence over ItemBackgroundColor.
+    /// </summary>
+    public Brush? ItemBackgroundBrush
+    {
+        get => (Brush?)GetValue(ItemBackgroundBrushProperty);
+        set => SetValue(ItemBackgroundBrushProperty, value);
+    }
+
+    /// <summary>
     /// Background mode applied to the complete list viewport.
     /// </summary>
     public CollectionListBackgroundMode ListBackgroundMode
@@ -198,6 +206,15 @@ public abstract partial class CollectionListViewBase : ContentView
     {
         get => (Color)GetValue(ListBackgroundColorProperty);
         set => SetValue(ListBackgroundColorProperty, value);
+    }
+
+    /// <summary>
+    /// Custom viewport brush. A gradient takes precedence over ListBackgroundColor.
+    /// </summary>
+    public Brush? ListBackgroundBrush
+    {
+        get => (Brush?)GetValue(ListBackgroundBrushProperty);
+        set => SetValue(ListBackgroundBrushProperty, value);
     }
 
     /// <summary>
@@ -281,8 +298,21 @@ public abstract partial class CollectionListViewBase : ContentView
     /// </summary>
     public static readonly BindableProperty ItemBackgroundColorProperty =
         BindableProperty.Create(nameof(ItemBackgroundColor), typeof(Color),
-            typeof(CollectionListViewBase), Color.FromArgb("#F7F8FA"),
+            typeof(CollectionListViewBase), CollectionListColors.Get("ItemSurfaceLight"),
             propertyChanged: (bindable, oldValue, newValue) =>
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                if (!Equals(oldValue, newValue)) control.ItemBackgroundBrush = null;
+                control.RefreshItemBackgroundSurfaces();
+                control.OnItemBackgroundConfigurationChanged();
+            });
+
+    /// <summary>
+    /// Identifies the <see cref="ItemBackgroundBrush"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty ItemBackgroundBrushProperty =
+        BindableProperty.Create(nameof(ItemBackgroundBrush), typeof(Brush), typeof(CollectionListViewBase),
+            default(Brush), propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.RefreshItemBackgroundSurfaces();
@@ -307,8 +337,23 @@ public abstract partial class CollectionListViewBase : ContentView
     /// </summary>
     public static readonly BindableProperty ListBackgroundColorProperty =
         BindableProperty.Create(nameof(ListBackgroundColor), typeof(Color),
-            typeof(CollectionListViewBase), Color.FromArgb("#FFFCFA"),
+            typeof(CollectionListViewBase), CollectionListColors.Get("ListSurfaceLight"),
             propertyChanged: (bindable, oldValue, newValue) =>
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+
+                if (!Equals(oldValue, newValue)) control.ListBackgroundBrush = null;
+
+                control.ApplyListBackgroundConfiguration();
+                control.OnListBackgroundConfigurationChanged();
+            });
+
+    /// <summary>
+    /// Identifies the <see cref="ListBackgroundBrush"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty ListBackgroundBrushProperty =
+        BindableProperty.Create(nameof(ListBackgroundBrush), typeof(Brush), typeof(CollectionListViewBase),
+            default(Brush), propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.ApplyListBackgroundConfiguration();
@@ -328,35 +373,6 @@ public abstract partial class CollectionListViewBase : ContentView
                 control.OnListBackgroundConfigurationChanged();
             });
 
-    private sealed class RoundedTreeConnectorDrawable(Color color, bool isLast) : IDrawable
-    {
-        public void Draw(ICanvas canvas, RectF dirtyRect)
-        {
-            if (dirtyRect.Width <= 0 || dirtyRect.Height <= 0) return;
-
-            float spineX = Math.Min(8.5f, dirtyRect.Width * 0.38f);
-            float targetX = Math.Max(spineX + 8, dirtyRect.Width - 1);
-            float junctionY = Math.Min(17f, Math.Max(10f, dirtyRect.Height * 0.45f));
-
-            canvas.StrokeColor = color;
-            canvas.StrokeSize = 1.7f;
-            canvas.StrokeLineCap = LineCap.Round;
-            canvas.StrokeLineJoin = LineJoin.Round;
-
-            PathF spine = new();
-
-            spine.MoveTo(spineX, 0);
-            spine.LineTo(spineX, isLast ? junctionY : dirtyRect.Height);
-            canvas.DrawPath(spine);
-
-            PathF branch = new();
-
-            branch.MoveTo(spineX, junctionY);
-            branch.QuadTo(spineX + 5.5f, junctionY + 1.5f, targetX, junctionY);
-            canvas.DrawPath(branch);
-        }
-    }
-
     /// <summary>
     /// Creates a nested block-style group view from the shared GroupNode model.
     /// Item creation, group labels and chevron resources are supplied by the derived list.
@@ -375,29 +391,26 @@ public abstract partial class CollectionListViewBase : ContentView
         ArgumentNullException.ThrowIfNull(formatGroupValue);
         ArgumentNullException.ThrowIfNull(getChevron);
 
-        GroupBlockView view = new()
-        {
-            Margin = new Thickness(depth * 9, 1, 0, 2)
-        };
+        GroupBlockView view = new() { Margin = new Thickness(depth * 9, 1, 0, 2) };
 
-        view.GroupTitle.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}  ·  {CountGroupItems(group)}";
-        view.ChevronImage.Source = getChevron(true);
+        view.TitleLabel.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}  ·  {CountGroupItems(group)}";
+        view.Chevron.Source = getChevron(true);
 
         foreach (GroupNode<TItem, TParameter> nested in group.Children)
-            view.ContentHost.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
-        foreach (TItem item in group.Items) view.ContentHost.Children.Add(createItemView(item));
+            view.ChildrenHost.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
+        foreach (TItem item in group.Items) view.ChildrenHost.Children.Add(createItemView(item));
 
-        view.HeaderView.GestureRecognizers.Add(new TapGestureRecognizer
+        view.Header.GestureRecognizers.Add(new TapGestureRecognizer
         {
-            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ContentHost, expand =>
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ChildrenHost, expand =>
             {
-                view.ChevronImage.Source = getChevron(expand);
+                view.Chevron.Source = getChevron(expand);
 
-                ToolTipProperties.SetText(view.HeaderView, expand ? "Collapse group" : "Expand group");
+                ToolTipProperties.SetText(view.Header, expand ? "Collapse group" : "Expand group");
             }))
         });
 
-        ToolTipProperties.SetText(view.HeaderView, "Collapse group");
+        ToolTipProperties.SetText(view.Header, "Collapse group");
 
         return view;
     }
@@ -420,18 +433,18 @@ public abstract partial class CollectionListViewBase : ContentView
 
         GroupLineView view = new();
 
-        view.RootGrid.Margin = new Thickness(depth * 3, 0, 0, 2);
-        view.TreeConnector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
-        view.GroupTitle.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}";
-        view.ItemCount.Text = CountGroupItems(group).ToString();
-        view.ChevronImage.Source = getChevron(true);
+        view.LayoutRoot.Margin = new Thickness(depth * 3, 0, 0, 2);
+        view.Connector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
+        view.TitleLabel.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}";
+        view.CountLabel.Text = CountGroupItems(group).ToString();
+        view.Chevron.Source = getChevron(true);
 
         int childCount = group.Children.Count + group.Items.Count;
         int childIndex = 0;
 
         foreach (GroupNode<TItem, TParameter> nested in group.Children)
         {
-            view.ContentHost.Children.Add(CreateLineGroupView(
+            view.ChildrenHost.Children.Add(CreateLineGroupView(
                 nested, depth + 1, childIndex == childCount - 1,
                 createItemView, getParameterName, formatGroupValue, getChevron));
 
@@ -440,22 +453,22 @@ public abstract partial class CollectionListViewBase : ContentView
 
         foreach (TItem item in group.Items)
         {
-            view.ContentHost.Children.Add(CreateLineItemRow(item, depth + 1, childIndex == childCount - 1, createItemView));
+            view.ChildrenHost.Children.Add(CreateLineItemRow(item, depth + 1, childIndex == childCount - 1, createItemView));
 
             childIndex++;
         }
 
-        view.HeaderView.GestureRecognizers.Add(new TapGestureRecognizer
+        view.Header.GestureRecognizers.Add(new TapGestureRecognizer
         {
-            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ContentHost, expand =>
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ChildrenHost, expand =>
             {
-                view.ChevronImage.Source = getChevron(expand);
+                view.Chevron.Source = getChevron(expand);
 
-                ToolTipProperties.SetText(view.HeaderView, expand ? "Collapse group" : "Expand group");
+                ToolTipProperties.SetText(view.Header, expand ? "Collapse group" : "Expand group");
             }))
         });
 
-        ToolTipProperties.SetText(view.HeaderView, "Collapse group");
+        ToolTipProperties.SetText(view.Header, "Collapse group");
 
         return view;
     }
@@ -463,8 +476,8 @@ public abstract partial class CollectionListViewBase : ContentView
     private View CreateLineItemRow<TItem>(TItem item, int depth, bool isLast, Func<TItem, View> createItemView)
     {
         GroupLineItemRowView row = new();
-        row.TreeConnector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
-        row.ItemContent.Content = createItemView(item);
+        row.Connector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
+        row.ItemHost.Content = createItemView(item);
 
         return row;
     }
@@ -474,11 +487,11 @@ public abstract partial class CollectionListViewBase : ContentView
 
     private static Color GetTreeLineColor(int depth)
     {
-        string[] darkPalette = ["#8FA7C5", "#7DAFAD", "#A89BC7"];
-        string[] lightPalette = ["#7797BF", "#70A39D", "#9888BA"];
-        string[] palette = Application.Current?.RequestedTheme == AppTheme.Dark ? darkPalette : lightPalette;
+        Color[] palette = Application.Current?.RequestedTheme == AppTheme.Dark
+            ? CollectionListColors.GetPalette("TreeLineDark1", "TreeLineDark2", "TreeLineDark3")
+            : CollectionListColors.GetPalette("TreeLineLight1", "TreeLineLight2", "TreeLineLight3");
 
-        return Color.FromArgb(palette[depth % palette.Length]);
+        return palette[depth % palette.Length];
     }
 
     /// <summary>
@@ -514,8 +527,8 @@ public abstract partial class CollectionListViewBase : ContentView
 
         CollectionViewController<
             TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
-            TFilterRule, TSearchRule, TGroupRule, TSortRule> controller = new(
-                source, sortParameters, groupParameters, searchParameters);
+            TFilterRule, TSearchRule, TGroupRule, TSortRule> controller = 
+                new(source, sortParameters, groupParameters, searchParameters);
 
         observedSourceCollection = source;
         observedFilteredItems = source.FilteredItems;
@@ -634,7 +647,7 @@ public abstract partial class CollectionListViewBase : ContentView
     /// <summary>
     /// Applies the selected search-panel entrance animation to a supplied visual element.
     /// </summary>
-    protected async Task ShowSearchPanelEffectAsync(VisualElement panel)
+    protected async ValueTask ShowSearchPanelEffectAsync(VisualElement panel)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
@@ -674,7 +687,7 @@ public abstract partial class CollectionListViewBase : ContentView
     /// <summary>
     /// Applies the selected search-panel exit animation to a supplied visual element.
     /// </summary>
-    protected async Task HideSearchPanelEffectAsync(VisualElement panel)
+    protected async ValueTask HideSearchPanelEffectAsync(VisualElement panel)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
@@ -705,65 +718,38 @@ public abstract partial class CollectionListViewBase : ContentView
     /// Toggles a group's children using the common collection group expansion animation.
     /// Returns null when another transition is already running for the same visual element.
     /// </summary>
-    protected async Task<bool?> ToggleGroupChildrenEffectAsync(VisualElement children, Action<bool>? onExpandedChanged = null)
+    protected async ValueTask<bool?> ToggleGroupChildrenEffectAsync(VisualElement children, Action<bool>? onExpandedChanged = null)
     {
         ArgumentNullException.ThrowIfNull(children);
 
         if (!transitioningGroups.Add(children)) return null;
 
         bool expand = !children.IsVisible;
-        const uint expandDuration = 180;
-        const uint collapseDuration = 130;
+        uint duration = expand ? 180u : 130u;
+        Easing easing = expand ? Easing.CubicOut : Easing.CubicIn;
 
         try
         {
             if (expand)
             {
                 children.IsVisible = true;
+                children.Opacity = 0;
 
-                switch (GroupExpandEffect)
-                {
-                    case CollectionGroupExpandEffect.Fade:
-                        children.Opacity = 0;
-                        await children.FadeToAsync(1, expandDuration, Easing.CubicOut);
-                        break;
-                    case CollectionGroupExpandEffect.Slide:
-                        children.Opacity = 0;
-                        children.TranslationY = -9;
-                        await Task.WhenAll(
-                            children.FadeToAsync(1, expandDuration, Easing.CubicOut),
-                            children.TranslateToAsync(0, 0, expandDuration, Easing.CubicOut));
-                        break;
-                    case CollectionGroupExpandEffect.Scale:
-                        children.Opacity = 0;
-                        children.Scale = 0.97;
-                        await Task.WhenAll(
-                            children.FadeToAsync(1, expandDuration, Easing.CubicOut),
-                            children.ScaleToAsync(1, expandDuration, Easing.CubicOut));
-                        break;
-                }
+                if (GroupExpandEffect == CollectionGroupExpandEffect.Slide) children.TranslationY = -9;
+                else if (GroupExpandEffect == CollectionGroupExpandEffect.Scale) children.Scale = 0.97;
             }
-            else
+
+            double targetOpacity = expand ? 1 : 0;
+
+            Task<bool> fadeTask = children.FadeToAsync(targetOpacity, duration, easing);
+            Task extraTask = GroupExpandEffect switch
             {
-                switch (GroupExpandEffect)
-                {
-                    case CollectionGroupExpandEffect.Fade:
-                        await children.FadeToAsync(0, collapseDuration, Easing.CubicIn);
-                        break;
-                    case CollectionGroupExpandEffect.Slide:
-                        await Task.WhenAll(
-                            children.FadeToAsync(0, collapseDuration, Easing.CubicIn),
-                            children.TranslateToAsync(0, -7, collapseDuration, Easing.CubicIn));
-                        break;
-                    case CollectionGroupExpandEffect.Scale:
-                        await Task.WhenAll(
-                            children.FadeToAsync(0, collapseDuration, Easing.CubicIn),
-                            children.ScaleToAsync(0.97, collapseDuration, Easing.CubicIn));
-                        break;
-                }
+                CollectionGroupExpandEffect.Slide => children.TranslateToAsync(0, expand ? 0 : -7, duration, easing),
+                CollectionGroupExpandEffect.Scale => children.ScaleToAsync(expand ? 1 : 0.97, duration, easing),
+                _ => Task.CompletedTask
+            };
 
-                children.IsVisible = false;
-            }
+            await Task.WhenAll(fadeTask, extraTask);
 
             return expand;
         }
@@ -825,9 +811,9 @@ public abstract partial class CollectionListViewBase : ContentView
         bool addDivider = true,
         Func<bool>? isAvailable = null)
     {
-        CollectionPopupSectionVisual section = 
+        CollectionPopupSectionVisual section =
             CollectionListPopupBuilder.CreateSection(title, buildContent, chevronSource, initiallyExpanded, addDivider, isAvailable);
-        
+
         section.RefreshVisibility();
 
         return section;
@@ -849,8 +835,8 @@ public abstract partial class CollectionListViewBase : ContentView
         bool addDivider = true,
         Func<bool>? isAvailable = null)
     {
-        CollectionPopupOptionVisual option = 
-            CollectionListPopupBuilder.CreateOption(text, iconSource, action, addDivider, isAvailable);
+        CollectionPopupOptionVisual option = CollectionListPopupBuilder.CreateOption(text, iconSource, action, addDivider, isAvailable);
+
         option.RefreshVisibility();
 
         return option;
@@ -869,7 +855,7 @@ public abstract partial class CollectionListViewBase : ContentView
         ArgumentNullException.ThrowIfNull(descriptor.IconSource);
         ArgumentNullException.ThrowIfNull(descriptor.Action);
 
-        CollectionPopupOptionVisual visual = 
+        CollectionPopupOptionVisual visual =
             CreatePopupOption(descriptor.Text, descriptor.IconSource, descriptor.Action, descriptor.AddDivider, descriptor.IsAvailable);
 
         host.Children.Add(visual.Container);
@@ -970,8 +956,7 @@ public abstract partial class CollectionListViewBase : ContentView
         drop.DragOver += (_, args) =>
         {
             args.AcceptedOperation = DataPackageOperation.Copy;
-            row.BackgroundColor = 
-            Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#394657") : Color.FromArgb("#E8F1FC");
+            row.BackgroundColor = CollectionListColors.ForTheme("DragHighlightLight", "DragHighlightDark");
         };
         drop.DragLeave += (_, _) => row.BackgroundColor = Colors.Transparent;
         drop.Drop += (_, args) =>
@@ -1082,17 +1067,17 @@ public abstract partial class CollectionListViewBase : ContentView
 
     private void ApplyItemBackground(VisualElement surface)
     {
-        Color baseColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#2D323A") : Color.FromArgb("#F7F8FA");
+        Color baseColor = CollectionListColors.ForTheme("ItemSurfaceLight", "ItemSurfaceDark");
 
         bool automaticTransparent = GroupDisplayMode == CollectionGroupDisplayMode.Lines
             || (ListBackgroundMode == CollectionListBackgroundMode.Image && ListBackgroundImageSource is not null);
 
-        surface.BackgroundColor = ItemBackgroundMode switch
+        surface.Background = ItemBackgroundMode switch
         {
-            CollectionItemBackgroundMode.Transparent => Colors.Transparent,
-            CollectionItemBackgroundMode.Base => baseColor,
-            CollectionItemBackgroundMode.Custom => ItemBackgroundColor,
-            _ => automaticTransparent ? Colors.Transparent : baseColor
+            CollectionItemBackgroundMode.Transparent => new SolidColorBrush(Colors.Transparent),
+            CollectionItemBackgroundMode.Base => new SolidColorBrush(baseColor),
+            CollectionItemBackgroundMode.Custom => ItemBackgroundBrush ?? new SolidColorBrush(ItemBackgroundColor),
+            _ => new SolidColorBrush(automaticTransparent ? Colors.Transparent : baseColor)
         };
     }
 
@@ -1105,14 +1090,16 @@ public abstract partial class CollectionListViewBase : ContentView
     {
         if (listViewportBorder is null || listBackgroundImage is null) return;
 
-        Color baseColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#24272D") : Color.FromArgb("#FFFCFA");
+        Color baseColor = CollectionListColors.ForTheme("ListSurfaceLight", "ListSurfaceDark");
         bool hasImageBackground = ListBackgroundMode == CollectionListBackgroundMode.Image && ListBackgroundImageSource is not null;
 
-        listViewportBorder.BackgroundColor = hasImageBackground ? Colors.Transparent : ListBackgroundMode switch
+        listViewportBorder.Background = hasImageBackground
+            ? new SolidColorBrush(Colors.Transparent)
+            : ListBackgroundMode switch
             {
-                CollectionListBackgroundMode.Transparent => Colors.Transparent,
-                CollectionListBackgroundMode.Custom => ListBackgroundColor,
-                _ => baseColor
+                CollectionListBackgroundMode.Transparent => new SolidColorBrush(Colors.Transparent),
+                CollectionListBackgroundMode.Custom => ListBackgroundBrush ?? new SolidColorBrush(ListBackgroundColor),
+                _ => new SolidColorBrush(baseColor)
             };
 
         foreach ((VisualElement element, Color light, Color dark) in themedBackgroundSurfaces)

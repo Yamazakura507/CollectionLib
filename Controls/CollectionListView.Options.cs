@@ -60,7 +60,7 @@ public abstract partial class CollectionListView<
     {
         if (ItemsSource is not { Count: > 0 })
         {
-            AddPopupText("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ РїРѕРёСЃРєР°.");
+            AddPopupText("Нет сообщений для поиска.");
 
             return;
         }
@@ -82,19 +82,19 @@ public abstract partial class CollectionListView<
             })
             .ToArray();
 
-        AddPopupOptionSection("РџРѕР»СЏ РїРѕРёСЃРєР°", searchFieldOptions);
+        AddPopupOptionSection("Поля поиска", searchFieldOptions);
 
         bool strict = ItemsSource.SearchOptions.IsStrict;
         CollectionListOptionDescriptor strictOption = new(
             "search:strict",
-            "РўРѕС‡РЅРѕРµ СЃРѕРІРїР°РґРµРЅРёРµ С†РµР»РѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ",
+            "Точное совпадение целого значения",
             GetIcon(
                 strict ? CollectionListImageKeys.ListStateEnabled : CollectionListImageKeys.ListStateDisabled,
                 strict ? "list_state_enabled.svg" : "list_state_disabled.svg"),
             ToggleStrictSearch);
 
         AddPopupOptionSection(
-            "РЎРѕРїРѕСЃС‚Р°РІР»РµРЅРёРµ",
+            "Сопоставление",
             new[] { strictOption },
             addDivider: false,
             appendContent: section =>
@@ -110,33 +110,38 @@ public abstract partial class CollectionListView<
                 section.Children.Add(accuracyOptions);
             });
 
-        AddPopupText("Р РµР¶РёРј Рё СЂРµРіРёСЃС‚СЂ РїРµСЂРµРєР»СЋС‡Р°СЋС‚СЃСЏ РёРєРѕРЅРєР°РјРё СЃРїСЂР°РІР° РѕС‚ СЃС‚СЂРѕРєРё РїРѕРёСЃРєР°.");
-        AddPopupText("РџРѕСЃР»РµРґРЅРµРµ РІС‹Р±СЂР°РЅРЅРѕРµ РїРѕР»Рµ РїРѕРёСЃРєР° РЅРµР»СЊР·СЏ РѕС‚РєР»СЋС‡РёС‚СЊ.");
+        AddPopupText("Режим и регистр переключаются иконками справа от строки поиска.");
+        AddPopupText("Последнее выбранное поле поиска нельзя отключить.");
     }
 
     protected virtual void OnBuildSortContext()
     {
         if (ItemsSource is not { Count: > 0 })
         {
-            AddPopupText("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ СЃРѕСЂС‚РёСЂРѕРІРєРё.");
+            AddPopupText("Нет сообщений для сортировки.");
 
             return;
         }
 
-        AddPopupText("РќР°Р¶Р°С‚РёРµ РїРµСЂРµРєР»СЋС‡Р°РµС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ: РІС‹РєР»СЋС‡РµРЅРѕ в†’ РїРѕ РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ в†’ РїРѕ СѓР±С‹РІР°РЅРёСЋ в†’ РІС‹РєР»СЋС‡РµРЅРѕ.");
+        AddPopupText("Нажатие переключает состояние: выключено → по возрастанию → по убыванию → выключено.");
 
         viewController?.SynchronizeSelectedSortKind();
 
         SortKind[] algorithms = Enum.GetValues<SortKind>();
+
         AddCollapsibleSection("Sorting algorithm", section =>
         {
             SortAlgorithmPickerView picker = new();
+
             picker.Configure(algorithms.Select(GetSortKindDisplayName), Array.IndexOf(algorithms, selectedSortKind));
+
             picker.SelectionChanged += (_, selectedIndex) =>
             {
                 if (ItemsSource is null) return;
+
                 selectedSortKind = algorithms[selectedIndex];
             };
+
             section.Children.Add(picker);
         });
         SynchronizeSortParameterOrder();
@@ -167,10 +172,12 @@ public abstract partial class CollectionListView<
             })
             .ToArray();
 
-        AddPopupOptionSection("РљСЂРёС‚РµСЂРёРё СЃРѕСЂС‚РёСЂРѕРІРєРё", sortOptions, addDivider: false);
+        AddPopupOptionSection("Критерии сортировки", sortOptions, addDivider: false);
 
-        ImageButton clearButton = CreateIconButton(CollectionListImageKeys.ListReset, "list_reset.svg", "РћС‡РёСЃС‚РёС‚СЊ СЃРѕСЂС‚РёСЂРѕРІРєСѓ", 34);
+        ImageButton clearButton = CreateIconButton(CollectionListImageKeys.ListReset, "list_reset.svg", "Очистить сортировку", 34);
+
         clearButton.Clicked += (_, _) => ClearSorting();
+
         clearSortButton = clearButton;
         clearButton.IsVisible = ItemsSource.SortRules.Count > 0;
 
@@ -208,12 +215,12 @@ public abstract partial class CollectionListView<
     {
         if (ItemsSource is not { Count: > 0 })
         {
-            AddPopupText("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ С„РёР»СЊС‚СЂР°С†РёРё.");
+            AddPopupText("Нет сообщений для фильтрации.");
 
             return;
         }
 
-        AddPopupText("Р”Р»СЏ РєР°Р¶РґРѕРіРѕ Р°С‚СЂРёР±СѓС‚Р° РїРµСЂРµРєР»СЋС‡Р°РµС‚СЃСЏ СЃРѕСЃС‚РѕСЏРЅРёРµ: РІСЃРµ в†’ РґР° в†’ РЅРµС‚.");
+        AddPopupText("Для каждого атрибута переключается состояние: все → да → нет.");
 
         TFilterParameter[] availableParameters = BooleanFilterParameterValues.Where(IsFilterParameterAvailable).ToArray();
         CollectionListOptionDescriptor[] filterOptions = availableParameters
@@ -241,10 +248,10 @@ public abstract partial class CollectionListView<
             })
             .ToArray();
 
-        AddPopupOptionSection("РђС‚СЂРёР±СѓС‚С‹ СЃРѕРѕР±С‰РµРЅРёР№", filterOptions);
+        AddPopupOptionSection("Атрибуты сообщений", filterOptions);
         OnAppendAdditionalFilterOptions();
 
-        clearFilterButton = AddPopupResetButton("РЎР±СЂРѕСЃРёС‚СЊ С„РёР»СЊС‚СЂР°С†РёСЋ", ClearFilters);
+        clearFilterButton = AddPopupResetButton("Сбросить фильтрацию", ClearFilters);
         clearFilterButton.IsVisible = ItemsSource.FilterRules.Count > 0;
     }
 
@@ -252,18 +259,18 @@ public abstract partial class CollectionListView<
     {
         if (ItemsSource is not { Count: > 0 })
         {
-            AddPopupText("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ РіСЂСѓРїРїРёСЂРѕРІРєРё.");
+            AddPopupText("Нет сообщений для группировки.");
 
             return;
         }
 
-        AddPopupText("Р’С‹Р±СЂР°РЅРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹ РѕР±СЂР°Р·СѓСЋС‚ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Рµ СѓСЂРѕРІРЅРё РґРµСЂРµРІР°. РџРµСЂРµС‚Р°СЃРєРёРІР°Р№С‚Рµ СЃС‚СЂРѕРєРё, С‡С‚РѕР±С‹ РёР·РјРµРЅРёС‚СЊ РёС… РїРѕСЂСЏРґРѕРє.");
+        AddPopupText("Выбранные параметры образуют последовательные уровни дерева. Перетаскивайте строки, чтобы изменить их порядок.");
 
         CollectionListOptionDescriptor[] groupDisplayOptions =
         [
             new(
                 "group-display:blocks",
-                "Р‘Р»РѕРєРё",
+                "Блоки",
                 GetIcon(
                     GroupDisplayMode == CollectionGroupDisplayMode.Blocks
                         ? CollectionListImageKeys.ListStateEnabled
@@ -274,7 +281,7 @@ public abstract partial class CollectionListView<
                 () => SetGroupDisplayMode(CollectionGroupDisplayMode.Blocks)),
             new(
                 "group-display:lines",
-                "Р›РёРЅРёРё",
+                "Линии",
                 GetIcon(
                     GroupDisplayMode == CollectionGroupDisplayMode.Lines
                         ? CollectionListImageKeys.ListStateEnabled
@@ -286,7 +293,7 @@ public abstract partial class CollectionListView<
                 AddDivider: false)
         ];
 
-        AddPopupOptionSection("Р’РёРґ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ", groupDisplayOptions, isAvailable: () => ItemsSource?.GroupRules.Count > 0);
+        AddPopupOptionSection("Вид отображения", groupDisplayOptions, isAvailable: () => ItemsSource?.GroupRules.Count > 0);
         SynchronizeGroupParameterOrder();
 
         CollectionListOptionDescriptor[] groupOptions = groupParameterOrder
@@ -306,21 +313,21 @@ public abstract partial class CollectionListView<
             })
             .ToArray();
 
-        AddPopupOptionSection("РЈСЂРѕРІРЅРё РіСЂСѓРїРїРёСЂРѕРІРєРё", groupOptions, addDivider: false);
+        AddPopupOptionSection("Уровни группировки", groupOptions, addDivider: false);
 
-        clearGroupButton = AddPopupResetButton("РЎР±СЂРѕСЃРёС‚СЊ РіСЂСѓРїРїРёСЂРѕРІРєСѓ", ClearGrouping);
+        clearGroupButton = AddPopupResetButton("Сбросить группировку", ClearGrouping);
         clearGroupButton.IsVisible = ItemsSource.GroupRules.Count > 0;
     }
 
     protected virtual void OnBuildViewContext()
     {
-        AddPopupText("РќР°СЃС‚СЂРѕР№С‚Рµ РїРѕРґР»РѕР¶РєСѓ СЃРѕРѕР±С‰РµРЅРёР№ Рё С„РѕРЅРѕРІСѓСЋ РїРѕРІРµСЂС…РЅРѕСЃС‚СЊ СЃРїРёСЃРєР°.");
+        AddPopupText("Настройте подложку сообщений и фоновую поверхность списка.");
 
         CollectionListOptionDescriptor[] itemBackgroundOptions =
         [
             new(
                 "view:item:auto",
-                "РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё",
+                "Автоматически",
                 GetIcon(
                     ItemBackgroundMode == CollectionItemBackgroundMode.Automatic
                         ? CollectionListImageKeys.ListStateEnabled
@@ -331,7 +338,7 @@ public abstract partial class CollectionListView<
                 () => SetItemBackgroundMode(CollectionItemBackgroundMode.Automatic)),
             new(
                 "view:item:transparent",
-                "РџСЂРѕР·СЂР°С‡РЅС‹Р№",
+                "Прозрачный",
                 GetIcon(
                     ItemBackgroundMode == CollectionItemBackgroundMode.Transparent
                         ? CollectionListImageKeys.ListStateEnabled
@@ -342,7 +349,7 @@ public abstract partial class CollectionListView<
                 () => SetItemBackgroundMode(CollectionItemBackgroundMode.Transparent)),
             new(
                 "view:item:base",
-                "Р‘Р°Р·РѕРІС‹Р№",
+                "Базовый",
                 GetIcon(
                     ItemBackgroundMode == CollectionItemBackgroundMode.Base
                         ? CollectionListImageKeys.ListStateEnabled
@@ -353,7 +360,7 @@ public abstract partial class CollectionListView<
                 () => SetItemBackgroundMode(CollectionItemBackgroundMode.Base)),
             new(
                 "view:item:custom",
-                "РќР°СЃС‚СЂР°РёРІР°РµРјС‹Р№",
+                "Настраиваемый",
                 GetIcon(
                     ItemBackgroundMode == CollectionItemBackgroundMode.Custom
                         ? CollectionListImageKeys.ListStateEnabled
@@ -366,13 +373,13 @@ public abstract partial class CollectionListView<
         ];
 
         AddPopupOptionSection(
-            "Р¤РѕРЅ СЌР»РµРјРµРЅС‚РѕРІ СЃРїРёСЃРєР°",
+            "Фон элементов списка",
             itemBackgroundOptions,
             appendContent: section =>
             {
                 itemColorPickerPanel = BuildColorPickerPanel(
-                    ItemBackgroundColor,
-                    color => ItemBackgroundColor = color);
+                    ItemBackgroundBrush ?? new SolidColorBrush(ItemBackgroundColor),
+                    brush => ApplySelectedBrush(brush, value => ItemBackgroundBrush = value, value => ItemBackgroundColor = value));
                 section.Children.Add(itemColorPickerPanel);
             });
 
@@ -380,7 +387,7 @@ public abstract partial class CollectionListView<
         [
             new(
                 "view:list:transparent",
-                "РџСЂРѕР·СЂР°С‡РЅС‹Р№",
+                "Прозрачный",
                 GetIcon(
                     ListBackgroundMode == CollectionListBackgroundMode.Transparent
                         ? CollectionListImageKeys.ListStateEnabled
@@ -391,7 +398,7 @@ public abstract partial class CollectionListView<
                 () => SetListBackgroundMode(CollectionListBackgroundMode.Transparent)),
             new(
                 "view:list:base",
-                "Р‘Р°Р·РѕРІС‹Р№",
+                "Базовый",
                 GetIcon(
                     ListBackgroundMode == CollectionListBackgroundMode.Base
                         ? CollectionListImageKeys.ListStateEnabled
@@ -402,7 +409,7 @@ public abstract partial class CollectionListView<
                 () => SetListBackgroundMode(CollectionListBackgroundMode.Base)),
             new(
                 "view:list:custom",
-                "РќР°СЃС‚СЂР°РёРІР°РµРјС‹Р№",
+                "Настраиваемый",
                 GetIcon(
                     ListBackgroundMode == CollectionListBackgroundMode.Custom
                         ? CollectionListImageKeys.ListStateEnabled
@@ -413,7 +420,7 @@ public abstract partial class CollectionListView<
                 () => SetListBackgroundMode(CollectionListBackgroundMode.Custom)),
             new(
                 "view:list:image",
-                "РР·РѕР±СЂР°Р¶РµРЅРёРµ",
+                "Изображение",
                 GetIcon(
                     ListBackgroundMode == CollectionListBackgroundMode.Image
                         ? CollectionListImageKeys.ListStateEnabled
@@ -426,31 +433,48 @@ public abstract partial class CollectionListView<
         ];
 
         AddPopupOptionSection(
-            "Р¤РѕРЅ СЃР°РјРѕРіРѕ СЃРїРёСЃРєР°",
+            "Фон самого списка",
             listBackgroundOptions,
             addDivider: false,
             appendContent: section =>
             {
                 listColorPickerPanel = BuildColorPickerPanel(
-                    ListBackgroundColor,
-                    color => ListBackgroundColor = color);
+                    ListBackgroundBrush ?? new SolidColorBrush(ListBackgroundColor),
+                    brush => ApplySelectedBrush(brush, value => ListBackgroundBrush = value, value => ListBackgroundColor = value));
+               
                 section.Children.Add(listColorPickerPanel);
-
+                
                 listImagePickerPanel = BuildListImagePickerPanel();
+
                 section.Children.Add(listImagePickerPanel);
             });
         UpdateViewOptionStates();
     }
 
-    private VerticalStackLayout BuildColorPickerPanel(Color initialColor, Action<Color> colorChanged)
+    private ColorBrushPickerView BuildColorPickerPanel(Brush initialBrush, Action<Brush> brushChanged)
     {
-        HsvColorPickerView picker = new();
+        ColorBrushPickerView picker = new();
 
-        picker.Configure(initialColor);
+        picker.Configure(initialBrush);
 
-        picker.ColorChanged += (_, color) => colorChanged(color);
+        picker.BrushChanged += (_, brush) => brushChanged(brush);
 
         return picker;
+    }
+
+    private static void ApplySelectedBrush(Brush brush, Action<Brush> setBrush, Action<Color> setLegacyColor)
+    {
+        Color? representativeColor = brush switch
+        {
+            SolidColorBrush solid => solid.Color,
+            LinearGradientBrush gradient when gradient.GradientStops.Count > 0
+                => gradient.GradientStops.OrderBy(stop => stop.Offset).First().Color,
+            _ => null
+        };
+
+        if (representativeColor is Color color) setLegacyColor(color);
+
+        setBrush(brush);
     }
 
     private ListImagePickerView BuildListImagePickerPanel()
@@ -538,11 +562,11 @@ public abstract partial class CollectionListView<
             #if WINDOWS
             Microsoft.UI.Xaml.Window? platformWindow = Window?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
 
-            if (platformWindow is null) throw new InvalidOperationException("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РѕРєРЅРѕ РїСЂРёР»РѕР¶РµРЅРёСЏ РґР»СЏ РІС‹Р±РѕСЂР° С„Р°Р№Р»Р°.");
+            if (platformWindow is null) throw new InvalidOperationException("Не удалось получить окно приложения для выбора файла.");
 
             Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(platformWindow.AppWindow.Id)
             {
-                CommitButtonText = "Р’С‹Р±СЂР°С‚СЊ",
+                CommitButtonText = "Выбрать",
                 SuggestedStartLocation = Microsoft.Windows.Storage.Pickers.PickerLocationId.PicturesLibrary,
                 ViewMode = Microsoft.Windows.Storage.Pickers.PickerViewMode.Thumbnail
             };
@@ -562,7 +586,7 @@ public abstract partial class CollectionListView<
             #else
             FileResult? selectedFile = await FilePicker.Default.PickAsync(new PickOptions
             {
-                PickerTitle = "Р’С‹Р±РµСЂРёС‚Рµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ РґР»СЏ С„РѕРЅР° СЃРїРёСЃРєР°",
+                PickerTitle = "Выберите изображение для фона списка",
                 FileTypes = FilePickerFileType.Images
             });
 
@@ -602,8 +626,8 @@ public abstract partial class CollectionListView<
             System.Diagnostics.Debug.WriteLine($"Unable to select list background image: {exception}");
             Page? page = FindParentPage();
             if (page is not null)
-                await page.DisplayAlertAsync("РћС€РёР±РєР° РІС‹Р±РѕСЂР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ",
-                    $"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёРµ. {exception.Message}", "OK");
+                await page.DisplayAlertAsync("Ошибка выбора изображения",
+                    $"Не удалось загрузить изображение. {exception.Message}", "OK");
         }
     }
 
@@ -647,15 +671,16 @@ public abstract partial class CollectionListView<
     {
         GroupDisplayMode = mode;
 
-        bool blocksSelected = mode == CollectionGroupDisplayMode.Blocks;
-        SetPopupOptionState(
-            "group-display:blocks",
-            blocksSelected ? CollectionListImageKeys.ListStateEnabled : CollectionListImageKeys.ListStateDisabled,
-            blocksSelected ? "list_state_enabled.svg" : "list_state_disabled.svg");
-        SetPopupOptionState(
-            "group-display:lines",
-            !blocksSelected ? CollectionListImageKeys.ListStateEnabled : CollectionListImageKeys.ListStateDisabled,
-            !blocksSelected ? "list_state_enabled.svg" : "list_state_disabled.svg");
+        void UpdateOption(string id, CollectionGroupDisplayMode targetMode)
+        {
+            bool isSelected = mode == targetMode;
+            SetPopupOptionState(id,
+                isSelected ? CollectionListImageKeys.ListStateEnabled : CollectionListImageKeys.ListStateDisabled,
+                isSelected ? "list_state_enabled.svg" : "list_state_disabled.svg");
+        }
+
+        UpdateOption("group-display:blocks", CollectionGroupDisplayMode.Blocks);
+        UpdateOption("group-display:lines", CollectionGroupDisplayMode.Lines);
     }
 
     protected void ClearFilters()
@@ -732,6 +757,7 @@ public abstract partial class CollectionListView<
         GroupButton.IsVisible = hasItems;
         ViewButton.IsVisible = hasItems;
         ClearHistoryButton.IsVisible = hasItems;
+
         OnAdditionalControlsAvailabilityChanged(hasItems);
 
         if (!hasItems && isSearchVisible)

@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:resources="clr-namespace:CollectionLib.Resources"
+    x:Class="CollectionLib.Controls.Components.Picker.ColorBrushPickerView">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentView.Resources>
+
+    <VerticalStackLayout 
+        Padding="3,6,3,8" 
+        Spacing="8">
+        <Grid ColumnDefinitions="*,Auto" 
+              ColumnSpacing="8">
+            <Label Text="ЦВЕТ И ЗАЛИВКА"
+                   Style="{StaticResource CollectionPopupSectionHeadingStyle}"
+                   VerticalOptions="Center" />
+            <HorizontalStackLayout Grid.Column="1" 
+                                   Spacing="4">
+                <Button x:Name="ColorModeButton" 
+                        x:FieldModifier="internal"
+                        Text="Цвет"
+                        Style="{StaticResource CollectionPickerActionButtonStyle}"
+                        Clicked="OnColorModeClicked" />
+                <Button x:Name="GradientModeButton" 
+                        x:FieldModifier="internal"
+                        Text="Градиент"
+                        Style="{StaticResource CollectionPickerActionButtonStyle}"
+                        Clicked="OnGradientModeClicked" />
+            </HorizontalStackLayout>
+        </Grid>
+
+        <Border x:Name="BrushPreview" 
+                x:FieldModifier="internal"
+                HeightRequest="32"
+                StrokeThickness="1"
+                Stroke="{AppThemeBinding Light={StaticResource PopupBorderLight}, Dark={StaticResource PopupBorderDark}}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="7" />
+            </Border.StrokeShape>
+        </Border>
+
+        <Border Style="{StaticResource CollectionPickerPanelBorderStyle}" 
+                Padding="5">
+            <GraphicsView x:Name="ColorPlane" 
+                          x:FieldModifier="internal"
+                          HeightRequest="148"
+                          StartInteraction="OnColorPlaneInteraction"
+                          DragInteraction="OnColorPlaneInteraction" />
+        </Border>
+
+        <Grid RowDefinitions="Auto,Auto" 
+              RowSpacing="3">
+            <Label Text="ОТТЕНОК" 
+                   Style="{StaticResource CollectionMutedLabelStyle}" />
+            <Border Grid.Row="1"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource PopupBorderLight}, Dark={StaticResource PopupBorderDark}}"
+                    Padding="1">
+                <GraphicsView x:Name="HueSpectrum" 
+                              x:FieldModifier="internal"
+                              HeightRequest="15"
+                              StartInteraction="OnHueInteraction"
+                              DragInteraction="OnHueInteraction" />
+            </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="Auto,*,Auto,*" 
+              ColumnSpacing="6">
+            <Label Text="HEX" 
+                   Style="{StaticResource CollectionMutedLabelStyle}" 
+                   VerticalOptions="Center" />
+            <Entry x:Name="HexEntry" 
+                   x:FieldModifier="internal"
+                   Grid.Column="1"
+                   Style="{StaticResource CollectionEditorEntryStyle}"
+                   Placeholder="#RRGGBB"
+                   MaxLength="9"
+                   TextChanged="OnHexTextChanged" />
+            <Label Text="RGB" Grid.Column="2" 
+                   Style="{StaticResource CollectionMutedLabelStyle}" 
+                   VerticalOptions="Center" />
+            <Entry x:Name="RgbEntry" 
+                   x:FieldModifier="internal"
+                   Grid.Column="3"
+                   Style="{StaticResource CollectionEditorEntryStyle}"
+                   Placeholder="R, G, B"
+                   MaxLength="15"
+                   Keyboard="Text"
+                   TextChanged="OnRgbTextChanged" />
+        </Grid>
+
+        <VerticalStackLayout x:Name="GradientEditor" 
+                             x:FieldModifier="internal" 
+                             IsVisible="False" 
+                             Spacing="6">
+            <Label Text="СТОПЫ ГРАДИЕНТА" 
+                   Style="{StaticResource CollectionPopupSectionHeadingStyle}" />
+            <Border x:Name="GradientPreview" 
+                    x:FieldModifier="internal"
+                    HeightRequest="26"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource PopupBorderLight}, Dark={StaticResource PopupBorderDark}}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="6" />
+                </Border.StrokeShape>
+            </Border>
+            <Grid ColumnDefinitions="*,Auto,Auto" 
+                  ColumnSpacing="5">
+                <HorizontalStackLayout x:Name="GradientStopsHost" 
+                                       x:FieldModifier="internal"
+                                       Spacing="5"
+                                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="+"
+                        Style="{StaticResource CollectionPickerCompactButtonStyle}"
+                        Clicked="OnAddGradientStopClicked" />
+                <Button Grid.Column="2"
+                        Text="−"
+                        Style="{StaticResource CollectionPickerCompactButtonStyle}"
+                        Clicked="OnRemoveGradientStopClicked" />
+            </Grid>
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="Auto,55,Auto,55,*"
+                  ColumnSpacing="6"
+                  RowSpacing="4">
+                <Label Text="Позиция" 
+                       Style="{StaticResource CollectionMutedLabelStyle}" 
+                       VerticalOptions="Center" />
+                <Entry x:Name="GradientStopPositionEntry" 
+                       x:FieldModifier="internal"
+                       Grid.Column="1"
+                       Style="{StaticResource CollectionEditorEntryStyle}"
+                       Keyboard="Numeric"
+                       MaxLength="3"
+                       TextChanged="OnGradientStopPositionChanged" />
+                <Label Text="Угол" 
+                       Grid.Column="2"
+                       Style="{StaticResource CollectionMutedLabelStyle}"
+                       VerticalOptions="Center" />
+                <Entry x:Name="GradientAngleEntry" 
+                       x:FieldModifier="internal"
+                       Grid.Column="3"
+                       Style="{StaticResource CollectionEditorEntryStyle}"
+                       Placeholder="0–360"
+                       Keyboard="Numeric"
+                       MaxLength="3"
+                       TextChanged="OnGradientAngleTextChanged" />
+                <HorizontalStackLayout Grid.Row="1"
+                                       Grid.Column="0"
+                                       Grid.ColumnSpan="5"
+                                       HorizontalOptions="End"
+                                       Spacing="4">
+                    <Button Text="0°" 
+                            CommandParameter="0" 
+                            Style="{StaticResource CollectionPickerCompactButtonStyle}" 
+                            Clicked="OnGradientAngleClicked" />
+                    <Button Text="45°" 
+                            CommandParameter="45" 
+                            Style="{StaticResource CollectionPickerCompactButtonStyle}" 
+                            Clicked="OnGradientAngleClicked" />
+                    <Button Text="90°" 
+                            CommandParameter="90" 
+                            Style="{StaticResource CollectionPickerCompactButtonStyle}" 
+                            Clicked="OnGradientAngleClicked" />
+                    <Button Text="135°" 
+                            CommandParameter="135" 
+                            Style="{StaticResource CollectionPickerCompactButtonStyle}" 
+                            Clicked="OnGradientAngleClicked" />
+                </HorizontalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="БЫСТРЫЕ ЦВЕТА" 
+                   Style="{StaticResource CollectionMutedLabelStyle}" />
+            <FlexLayout Wrap="Wrap" 
+                        Direction="Row" 
+                        JustifyContent="Start">
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch1}" 
+                        CommandParameter="{StaticResource PickerSwatch1}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch2}" 
+                        CommandParameter="{StaticResource PickerSwatch2}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch3}" 
+                        CommandParameter="{StaticResource PickerSwatch3}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch4}" 
+                        CommandParameter="{StaticResource PickerSwatch4}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch5}" 
+                        CommandParameter="{StaticResource PickerSwatch5}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch6}" 
+                        CommandParameter="{StaticResource PickerSwatch6}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch7}" 
+                        CommandParameter="{StaticResource PickerSwatch7}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch8}" 
+                        CommandParameter="{StaticResource PickerSwatch8}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch9}" 
+                        CommandParameter="{StaticResource PickerSwatch9}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch10}" 
+                        CommandParameter="{StaticResource PickerSwatch10}" 
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch11}" 
+                        CommandParameter="{StaticResource PickerSwatch11}"
+                        Clicked="OnPresetClicked" />
+                <Button Style="{StaticResource CollectionPickerSwatchButtonStyle}" 
+                        BackgroundColor="{StaticResource PickerSwatch12}" 
+                        CommandParameter="{StaticResource PickerSwatch12}" 
+                        Clicked="OnPresetClicked" />
+            </FlexLayout>
+        </VerticalStackLayout>
+    </VerticalStackLayout>
+</ContentView>

@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="CollectionLib.Controls.Components.AppliedIndicatorView">
-    <Image 
+             x:Class="CollectionLib.Controls.Components.AppliedIndicatorView" xmlns:resources="clr-namespace:CollectionLib.Resources">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentView.Resources>
+
+    <Image
         x:Name="IndicatorImage" 
-        WidthRequest="17" 
+        x:FieldModifier="internal"
+        WidthRequest="17"
         HeightRequest="17"
-        Aspect="AspectFit" 
-        Margin="2,0" 
+        Aspect="AspectFit"
+        Margin="2,0"
         Opacity="0.9" />
 </ContentView>

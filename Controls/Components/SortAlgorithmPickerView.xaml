@@ -2,8 +2,17 @@
 <VerticalStackLayout xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                     x:Class="CollectionLib.Controls.Components.SortAlgorithmPickerView"
-                    Spacing="4">
+                    Spacing="4" xmlns:resources="clr-namespace:CollectionLib.Resources">
+    <VerticalStackLayout.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </VerticalStackLayout.Resources>
+
     <Picker x:Name="AlgorithmPicker" 
+            x:FieldModifier="internal"
             FontSize="12"
             Title="Выберите алгоритм сортировки"
             SelectedIndexChanged="OnSelectedIndexChanged" />

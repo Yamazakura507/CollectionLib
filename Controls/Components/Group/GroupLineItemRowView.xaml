@@ -1,18 +1,29 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="CollectionLib.Controls.Components.Group.GroupLineItemRowView">
+             x:Class="CollectionLib.Controls.Components.Group.GroupLineItemRowView" xmlns:resources="clr-namespace:CollectionLib.Resources">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <resources:CollectionPopupStyles />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentView.Resources>
+
     <Grid x:Name="LayoutRoot" 
-          ColumnDefinitions="22,*" 
-          ColumnSpacing="0" 
+          x:FieldModifier="internal"
+          ColumnDefinitions="22,*"
+          ColumnSpacing="0"
           MinimumHeightRequest="42">
         <GraphicsView x:Name="Connector" 
-                      WidthRequest="22" 
+                      x:FieldModifier="internal"
+                      WidthRequest="22"
                       HeightRequest="42"
-                      HorizontalOptions="Fill" 
-                      VerticalOptions="Fill" 
+                      HorizontalOptions="Fill"
+                      VerticalOptions="Fill"
                       InputTransparent="True" />
         <ContentView x:Name="ItemHost" 
+                     x:FieldModifier="internal"
                      Grid.Column="1" />
     </Grid>
 </ContentView>

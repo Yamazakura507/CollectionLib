@@ -59,8 +59,8 @@ The non-generic base owns reusable bindable presentation properties:
 - `SearchEffect` (`CollectionSearchEffect`);
 - `GroupDisplayMode` (`CollectionGroupDisplayMode`);
 - `GroupExpandEffect` (`CollectionGroupExpandEffect`);
-- `ItemBackgroundMode` (`CollectionItemBackgroundMode`), `ItemBackgroundColor`;
-- `ListBackgroundMode` (`CollectionListBackgroundMode`), `ListBackgroundColor`, `ListBackgroundImageSource`;
+- `ItemBackgroundMode` (`CollectionItemBackgroundMode`), `ItemBackgroundColor`, `ItemBackgroundBrush`;
+- `ListBackgroundMode` (`CollectionListBackgroundMode`), `ListBackgroundColor`, `ListBackgroundBrush`, `ListBackgroundImageSource`;
 - `ViewController`.
 
 The base control owns the behavior behind these settings. It executes common search-panel and group expand/collapse animations, resolves item and viewport background colors, and applies image, custom, base and transparent background modes. `CollectionListView<T...>` automatically wraps and registers item surfaces. A derived component calls `ConfigureListBackground(...)` once for its shared viewport and `RegisterThemedBackgroundSurface(...)` only for additional domain-specific surfaces.
@@ -145,3 +145,28 @@ ViewController = controller;
 ```
 
 The controller should be disposed when the owning control replaces its collection or is disposed. The derived control provides its own item renderer and adds options with `AddPopupOption`, supplying domain selectors and actions.
+
+Color properties remain supported for existing callers. Setting `ItemBackgroundColor` or `ListBackgroundColor` clears the corresponding custom brush; setting a brush takes precedence over its legacy color property.
+
+## Color and gradient backgrounds
+
+The view-options popup includes a shared color editor with a saturation/value plane, hue spectrum, HEX and RGB inputs, and preset swatches. Switch to gradient mode to edit a linear gradient with 2–8 color stops, stop positions and direction presets.
+
+Both picker instances return a `Brush`, so gradients can be used for item surfaces and the list viewport. The same properties are also available to callers:
+
+```csharp
+ListBackgroundMode = CollectionListBackgroundMode.Custom;
+ListBackgroundBrush = new LinearGradientBrush(
+    new GradientStopCollection
+    {
+        new(Colors.SteelBlue, 0),
+        new(Colors.MediumPurple, 1)
+    },
+    new Point(0, 0.5),
+    new Point(1, 0.5));
+
+ItemBackgroundMode = CollectionItemBackgroundMode.Custom;
+ItemBackgroundBrush = new SolidColorBrush(Colors.AliceBlue);
+```
+
+The old `HsvColorPickerView` type remains as a compatibility wrapper; new code should use `ColorBrushPickerView`.

@@ -18,6 +18,7 @@ public partial class SearchAccuracyOptionsView : ContentView
     private void OnAccuracyChanged(object? sender, ValueChangedEventArgs e)
     {
         int value = (int)Math.Round(e.NewValue);
+
         AccuracyLabel.Text = $"Fuzzy search accuracy: {value}";
 
         AccuracyChanged?.Invoke(this, value);
