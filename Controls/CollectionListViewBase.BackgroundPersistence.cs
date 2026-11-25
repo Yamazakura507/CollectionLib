@@ -89,7 +89,9 @@ public abstract partial class CollectionListViewBase
             if (state is null) return;
 
             isHandlingBackgroundOptionsChange = true;
+
             if (!options.IsSaveExplicitlySet) options.SetIsSaveFromStorage(state.IsSave);
+
             isHandlingBackgroundOptionsChange = false;
 
             if (!options.IsSave) return;
@@ -205,8 +207,7 @@ public abstract partial class CollectionListViewBase
     {
         SavingsBackgroundOptions? options = SavingsBackgroundOptions;
         if (options is null || !options.IsSave
-            || !TryGetBackgroundStoragePaths(options, out string imagePath, out _))
-            return;
+            || !TryGetBackgroundStoragePaths(options, out string imagePath, out _)) return;
 
         string? sourcePath = backgroundImageFilePath;
 
