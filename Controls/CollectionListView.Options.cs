@@ -3,6 +3,7 @@ using CollectionLib.Controls.Components;
 using CollectionLib.Controls.Components.Picker;
 using CollectionLib.Controls.Components.Search;
 using CollectionLib.Enums;
+using CollectionLib.Handlers;
 using CollectionLib.Models;
 using CollectionLib.Resources.ExtensionResources;
 using GroupLib.Models;
@@ -550,7 +551,7 @@ public abstract partial class CollectionListView<
         if (listImagePickerPanel is not null) listImagePickerPanel.IsVisible = ListBackgroundMode == CollectionListBackgroundMode.Image;
     }
 
-    private async Task PickListBackgroundImageAsync()
+    private async ValueTask PickListBackgroundImageAsync()
     {
         try
         {
@@ -624,10 +625,10 @@ public abstract partial class CollectionListView<
         catch (Exception exception)
         {
             System.Diagnostics.Debug.WriteLine($"Unable to select list background image: {exception}");
-            Page? page = FindParentPage();
-            if (page is not null)
-                await page.DisplayAlertAsync("Ошибка выбора изображения",
-                    $"Не удалось загрузить изображение. {exception.Message}", "OK");
+            HandlerAction.Report(
+                "Ошибка выбора изображения",
+                $"Не удалось загрузить изображение. {exception.Message}",
+                FindParentPage());
         }
     }
 

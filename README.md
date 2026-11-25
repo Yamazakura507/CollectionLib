@@ -170,3 +170,28 @@ ItemBackgroundBrush = new SolidColorBrush(Colors.AliceBlue);
 ```
 
 The old `HsvColorPickerView` type remains as a compatibility wrapper; new code should use `ColorBrushPickerView`.
+
+## Notification handling
+
+`HandlerAction` centralizes notifications raised by the library. Its static `Progress` field uses an alert dialog by default, while an application can replace it with any `IProgress<HandlerAction.Message>` implementation:
+
+```csharp
+using CollectionLib.Handlers;
+
+HandlerAction.Progress = new Progress<HandlerAction.Message>(message =>
+{
+    // Forward the notification to the application's toast, snackbar or notification service.
+    Debug.WriteLine($"{message.Title}: {message.Text}");
+});
+```
+
+A notification can also be reported directly:
+
+```csharp
+HandlerAction.Report(
+    "Background image",
+    "The image could not be loaded.",
+    page: currentPage);
+```
+
+The message contains its title, text, default dialog button caption and an optional MAUI page. The default handler uses that page (or the current application's active window page) to display the dialog on the UI thread. Call `HandlerAction.ResetProgress()` to restore the default dialog handler. Confirmation dialogs that require a `bool` result remain explicit dialogs and are not routed through `IProgress`.
