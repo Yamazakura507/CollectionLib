@@ -7,10 +7,10 @@ using CollectionLib.Extensions;
 using SortLib.Models;
 using WhereLib.Models;
 using GroupLib.Models;
-using Microsoft.Maui.Controls.Shapes;
 using CollectionLib.Interfaces;
 using CollectionLib.Models;
 using CollectionLib.Models.Popup;
+using CollectionLib.Controls.Components.Group;
 
 namespace CollectionLib.Controls;
 
@@ -46,10 +46,7 @@ public abstract partial class CollectionListViewBase : ContentView
     /// <summary>
     /// Initializes the shared XAML resources used by popup controls.
     /// </summary>
-    protected CollectionListViewBase()
-    {
-        InitializeComponent();
-    }
+    protected CollectionListViewBase() => InitializeComponent();
 
     /// <summary>
     /// Gets a theme-aware foreground color for popup text.
@@ -370,8 +367,7 @@ public abstract partial class CollectionListViewBase : ContentView
         Func<TItem, View> createItemView,
         Func<TParameter, string> getParameterName,
         Func<TParameter, object?, string> formatGroupValue,
-        Func<bool, ImageSource> getChevron)
-        where TParameter : struct, Enum
+        Func<bool, ImageSource> getChevron) where TParameter : struct, Enum
     {
         ArgumentNullException.ThrowIfNull(group);
         ArgumentNullException.ThrowIfNull(createItemView);
@@ -379,73 +375,33 @@ public abstract partial class CollectionListViewBase : ContentView
         ArgumentNullException.ThrowIfNull(formatGroupValue);
         ArgumentNullException.ThrowIfNull(getChevron);
 
-        VerticalStackLayout container = new()
+        GroupBlockView view = new()
         {
-            Spacing = 5,
             Margin = new Thickness(depth * 9, 1, 0, 2)
         };
 
-        int count = CountGroupItems(group);
-        string title = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}  ·  {count}";
-        Grid headerContent = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection { new(GridLength.Auto), new(GridLength.Star) },
-            ColumnSpacing = 7
-        };
-        Image chevron = new()
-        {
-            Source = getChevron(true),
-            WidthRequest = 15,
-            HeightRequest = 15,
-            VerticalOptions = LayoutOptions.Center,
-            Aspect = Aspect.AspectFit
-        };
-        Label groupTitle = new()
-        {
-            Text = title,
-            FontSize = 12,
-            FontAttributes = FontAttributes.Bold,
-            VerticalTextAlignment = TextAlignment.Center,
-            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#E6EAF0") : Color.FromArgb("#394351")
-        };
-        headerContent.Children.Add(chevron);
-        Grid.SetColumn(groupTitle, 1);
-        headerContent.Children.Add(groupTitle);
-
-        Border header = new()
-        {
-            HorizontalOptions = LayoutOptions.Fill,
-            Padding = new Thickness(9, 6),
-            StrokeThickness = 0,
-            BackgroundColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#343A44") : Color.FromArgb("#EEF1F5"),
-            StrokeShape = new RoundRectangle { CornerRadius = 8 },
-            Content = headerContent
-        };
-
-        VerticalStackLayout children = new() { Spacing = 6, Margin = new Thickness(10, 1, 0, 3) };
+        view.GroupTitle.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}  ·  {CountGroupItems(group)}";
+        view.ChevronImage.Source = getChevron(true);
 
         foreach (GroupNode<TItem, TParameter> nested in group.Children)
-            children.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
-        foreach (TItem item in group.Items) children.Children.Add(createItemView(item));
+            view.ContentHost.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
+        foreach (TItem item in group.Items) view.ContentHost.Children.Add(createItemView(item));
 
-        header.GestureRecognizers.Add(new TapGestureRecognizer
+        view.HeaderView.GestureRecognizers.Add(new TapGestureRecognizer
         {
-            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(children, expand =>
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ContentHost, expand =>
             {
-                chevron.Source = getChevron(expand);
-                ToolTipProperties.SetText(header, expand ? "Свернуть группу" : "Развернуть группу");
+                view.ChevronImage.Source = getChevron(expand);
+
+                ToolTipProperties.SetText(view.HeaderView, expand ? "Collapse group" : "Expand group");
             }))
         });
-        ToolTipProperties.SetText(header, "Свернуть группу");
-        container.Children.Add(header);
-        container.Children.Add(children);
-        return container;
+
+        ToolTipProperties.SetText(view.HeaderView, "Collapse group");
+
+        return view;
     }
 
-    /// <summary>
-    /// Creates a connected-line group view from the shared GroupNode model.
-    /// Item creation, group labels and chevron resources are supplied by the derived list.
-    /// </summary>
     protected View CreateLineGroupView<TItem, TParameter>(
         GroupNode<TItem, TParameter> group,
         int depth,
@@ -462,152 +418,53 @@ public abstract partial class CollectionListViewBase : ContentView
         ArgumentNullException.ThrowIfNull(formatGroupValue);
         ArgumentNullException.ThrowIfNull(getChevron);
 
-        Color lineColor = GetTreeLineColor(depth);
-        int count = CountGroupItems(group);
-        string title = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}";
+        GroupLineView view = new();
 
-        Grid layout = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection { new(new GridLength(22)), new(GridLength.Star) },
-            RowDefinitions = new RowDefinitionCollection { new(GridLength.Auto), new(GridLength.Auto) },
-            ColumnSpacing = 0,
-            RowSpacing = 0,
-            Margin = new Thickness(depth * 3, 0, 0, 2)
-        };
-
-        GraphicsView connector = new()
-        {
-            WidthRequest = 22,
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            Drawable = new RoundedTreeConnectorDrawable(lineColor, isLast),
-            InputTransparent = true
-        };
-        Grid.SetRowSpan(connector, 2);
-        layout.Children.Add(connector);
-
-        Image chevron = new()
-        {
-            Source = getChevron(true),
-            WidthRequest = 14,
-            HeightRequest = 14,
-            VerticalOptions = LayoutOptions.Center,
-            Aspect = Aspect.AspectFit
-        };
-        Label groupTitle = new()
-        {
-            Text = title,
-            FontSize = 12,
-            FontAttributes = FontAttributes.Bold,
-            VerticalTextAlignment = TextAlignment.Center,
-            LineBreakMode = LineBreakMode.TailTruncation,
-            TextColor = Application.Current?.RequestedTheme == AppTheme.Dark
-                ? Color.FromArgb("#E9EEF5")
-                : Color.FromArgb("#344256")
-        };
-        Border countBadge = new()
-        {
-            Padding = new Thickness(7, 2),
-            BackgroundColor = Colors.Transparent,
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 8 },
-            VerticalOptions = LayoutOptions.Center,
-            Content = new Label
-            {
-                Text = count.ToString(),
-                FontSize = 10,
-                FontAttributes = FontAttributes.Bold,
-                TextColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#DCE7F4") : Color.FromArgb("#52647B"),
-                VerticalTextAlignment = TextAlignment.Center
-            }
-        };
-
-        Grid headerContent = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) },
-            ColumnSpacing = 8,
-            VerticalOptions = LayoutOptions.Center
-        };
-        headerContent.Children.Add(chevron);
-        Grid.SetColumn(groupTitle, 1);
-        headerContent.Children.Add(groupTitle);
-        Grid.SetColumn(countBadge, 2);
-        headerContent.Children.Add(countBadge);
-
-        Border header = new()
-        {
-            Padding = new Thickness(9, 6),
-            Stroke = Colors.Transparent,
-            StrokeThickness = 0,
-            BackgroundColor = Colors.Transparent,
-            StrokeShape = new RoundRectangle { CornerRadius = 10 },
-            Content = headerContent
-        };
-        Grid.SetColumn(header, 1);
-        layout.Children.Add(header);
-
-        VerticalStackLayout children = new()
-        {
-            Spacing = 3,
-            Padding = new Thickness(0, 4, 0, 4),
-            IsVisible = true
-        };
+        view.RootGrid.Margin = new Thickness(depth * 3, 0, 0, 2);
+        view.TreeConnector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
+        view.GroupTitle.Text = $"{getParameterName(group.Parameter)}: {formatGroupValue(group.Parameter, group.Value)}";
+        view.ItemCount.Text = CountGroupItems(group).ToString();
+        view.ChevronImage.Source = getChevron(true);
 
         int childCount = group.Children.Count + group.Items.Count;
         int childIndex = 0;
+
         foreach (GroupNode<TItem, TParameter> nested in group.Children)
         {
-            children.Children.Add(CreateLineGroupView(
+            view.ContentHost.Children.Add(CreateLineGroupView(
                 nested, depth + 1, childIndex == childCount - 1,
                 createItemView, getParameterName, formatGroupValue, getChevron));
+
             childIndex++;
         }
+
         foreach (TItem item in group.Items)
         {
-            children.Children.Add(CreateLineItemRow(item, depth + 1, childIndex == childCount - 1, createItemView));
+            view.ContentHost.Children.Add(CreateLineItemRow(item, depth + 1, childIndex == childCount - 1, createItemView));
+
             childIndex++;
         }
 
-        Grid.SetColumn(children, 1);
-        Grid.SetRow(children, 1);
-        layout.Children.Add(children);
-        header.GestureRecognizers.Add(new TapGestureRecognizer
+        view.HeaderView.GestureRecognizers.Add(new TapGestureRecognizer
         {
-            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(children, expand =>
+            Command = new Command(() => _ = ToggleGroupChildrenEffectAsync(view.ContentHost, expand =>
             {
-                chevron.Source = getChevron(expand);
-                ToolTipProperties.SetText(header, expand ? "Свернуть группу" : "Развернуть группу");
+                view.ChevronImage.Source = getChevron(expand);
+
+                ToolTipProperties.SetText(view.HeaderView, expand ? "Collapse group" : "Expand group");
             }))
         });
-        ToolTipProperties.SetText(header, "Свернуть группу");
 
-        return layout;
+        ToolTipProperties.SetText(view.HeaderView, "Collapse group");
+
+        return view;
     }
 
     private View CreateLineItemRow<TItem>(TItem item, int depth, bool isLast, Func<TItem, View> createItemView)
     {
-        Grid row = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection { new(new GridLength(22)), new(GridLength.Star) },
-            ColumnSpacing = 0,
-            MinimumHeightRequest = 42
-        };
-        GraphicsView connector = new()
-        {
-            WidthRequest = 22,
-            HeightRequest = 42,
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
-            Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast),
-            InputTransparent = true
-        };
-
-        row.Children.Add(connector);
-
-        View itemView = createItemView(item);
-
-        Grid.SetColumn(itemView, 1);
-        row.Children.Add(itemView);
+        GroupLineItemRowView row = new();
+        row.TreeConnector.Drawable = new RoundedTreeConnectorDrawable(GetTreeLineColor(depth), isLast);
+        row.ItemContent.Content = createItemView(item);
 
         return row;
     }
@@ -669,6 +526,7 @@ public abstract partial class CollectionListViewBase : ContentView
         observedSourceProperties.PropertyChanged += SourceOnPropertyChanged;
 
         ViewController = controller;
+
         return controller;
     }
 
@@ -768,6 +626,7 @@ public abstract partial class CollectionListViewBase : ContentView
     protected void RegisterThemedBackgroundSurface(VisualElement surface, Color light, Color dark)
     {
         ArgumentNullException.ThrowIfNull(surface);
+
         themedBackgroundSurfaces.Add((surface, light, dark));
         ApplyListBackgroundConfiguration();
     }

@@ -5,19 +5,13 @@ using GroupLib.Models;
 using SortLib.Models;
 using WhereLib.Models;
 using CollectionLib.Resources.ExtensionResources;
+using CollectionLib.Controls.Components;
+using CollectionLib.Controls.Components.Picker;
 
 namespace CollectionLib.Controls;
 
 public abstract partial class CollectionListView<
-    TItem,
-    TFilterParameter,
-    TSearchParameter,
-    TGroupParameter,
-    TSortParameter,
-    TFilterRule,
-    TSearchRule,
-    TGroupRule,
-    TSortRule>
+    TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
     where TItem : class, INotifyPropertyChanged
     where TFilterParameter : struct, Enum
     where TSearchParameter : struct, Enum
@@ -33,7 +27,7 @@ public abstract partial class CollectionListView<
     protected ImageButton? clearGroupButton;
     protected VerticalStackLayout? itemColorPickerPanel;
     protected VerticalStackLayout? listColorPickerPanel;
-    protected VerticalStackLayout? listImagePickerPanel;
+    protected ListImagePickerView? listImagePickerPanel;
     protected Label? listImageStatusLabel;
 
     protected PopupKind activePopup;
@@ -138,47 +132,20 @@ public abstract partial class CollectionListView<
 
     private void AddPopupHeader(string title, bool showBack)
     {
-        Grid header = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection
-            {
-                new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto)
-            },
-            ColumnSpacing = 6
-        };
+        PopupHeaderView header = new();
 
-        if (showBack)
-        {
-            ImageButton backButton = CreateIconButton(CollectionListImageKeys.ListBack, "list_back.svg", "Назад", 30);
-            backButton.Clicked += (_, _) => ShowPopup(PopupKind.Central);
-            Grid.SetColumn(backButton, 0);
-            header.Children.Add(backButton);
-        }
+        header.Configure(
+            title,
+            showBack,
+            showBack ? GetIcon(CollectionListImageKeys.ListBack, "list_back.svg") : null,
+            GetIcon(CollectionListImageKeys.ListClose, "list_close.svg"));
 
-        Label titleLabel = new()
-        {
-            Text = title,
-            FontSize = 15,
-            FontAttributes = FontAttributes.Bold,
-            VerticalTextAlignment = TextAlignment.Center,
-            TextColor = PopupTextColor
-        };
+        header.Back.Clicked += (_, _) => ShowPopup(PopupKind.Central);
+        header.Close.Clicked += (_, _) => HidePopup();
 
-        Grid.SetColumn(titleLabel, 1);
-        header.Children.Add(titleLabel);
-
-        ImageButton closeButton = CreateIconButton(CollectionListImageKeys.ListClose, "list_close.svg", "Закрыть", 30);
-
-        closeButton.Clicked += (_, _) => HidePopup();
-
-        Grid.SetColumn(closeButton, 2);
-        header.Children.Add(closeButton);
+        ToolTipProperties.SetText(header.Back, "Назад");
+        ToolTipProperties.SetText(header.Close, "Закрыть");
         PopupContent.Children.Add(header);
-        PopupContent.Children.Add(new BoxView
-        {
-            HeightRequest = 1,
-            BackgroundColor = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#454B55") : Color.FromArgb("#E6E9EE")
-        });
     }
 
     protected void UpdatePopupOptionAvailability()

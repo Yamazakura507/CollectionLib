@@ -49,6 +49,7 @@ public abstract class CollectionViewCollection
     private readonly HashSet<TSearchRule> observedSearches = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<TGroupRule> observedGroups = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<TItem, int> observedItems = new(ReferenceEqualityComparer.Instance);
+    private bool isDisposed;
     private SearchOptions searchOptions = new();
     private IReadOnlyList<GroupNode<TItem, TGroupParameter>> groups = Array.Empty<GroupNode<TItem, TGroupParameter>>();
 
@@ -145,8 +146,47 @@ public abstract class CollectionViewCollection
     /// <summary>
     /// Recalculates the filtered/search view and dependent groups.
     /// </summary>
+    /// <summary>
+    /// Releases all item, rule and search-option subscriptions owned by this collection.
+    /// The collection remains readable but no longer maintains derived views.
+    /// </summary>
+    public override void Dispose()
+    {
+        if (isDisposed) return;
+
+        isDisposed = true;
+
+        filterRules.CollectionChanged -= FilterRulesOnCollectionChanged;
+        searchRules.CollectionChanged -= SearchRulesOnCollectionChanged;
+        groupRules.CollectionChanged -= GroupRulesOnCollectionChanged;
+        searchOptions.PropertyChanged -= SearchOptionsOnPropertyChanged;
+
+        foreach (TFilterRule rule in observedFilters) rule.PropertyChanged -= FilterRuleOnPropertyChanged;
+
+        observedFilters.Clear();
+
+        foreach (TSearchRule rule in observedSearches) rule.PropertyChanged -= SearchRuleOnPropertyChanged;
+
+        observedSearches.Clear();
+
+        foreach (TGroupRule rule in observedGroups) rule.PropertyChanged -= GroupRuleOnPropertyChanged;
+
+        observedGroups.Clear();
+
+        foreach (TItem item in observedItems.Keys) item.PropertyChanged -= ItemOnPropertyChanged;
+
+        observedItems.Clear();
+
+        base.Dispose();
+    }
+
+    /// <summary>
+    /// Recalculates the filtered/search view and dependent groups.
+    /// </summary>
     public void RefreshViews()
     {
+        if (isDisposed) return;
+
         IReadOnlyList<TItem> result = this.ApplyMany<TItem, TFilterParameter, TSearchParameter, TFilterRule, TSearchRule>
             (FilterRules, filterMatcher, SearchRules, searchValuesSelector, SearchOptions);
 
@@ -159,7 +199,11 @@ public abstract class CollectionViewCollection
     /// </summary>
     public void RefreshGroups()
     {
-        groups = groupRules.Count == 0 ? Array.Empty<GroupNode<TItem, TGroupParameter>>() : FilteredItems.Group(groupRules, groupKeySelector);
+        if (isDisposed) return;
+
+        groups = groupRules.Count == 0 
+            ? Array.Empty<GroupNode<TItem, TGroupParameter>>() 
+            : FilteredItems.Group(groupRules, groupKeySelector);
         
         OnPropertyChanged(new PropertyChangedEventArgs(nameof(Groups)));
     }
@@ -191,9 +235,9 @@ public abstract class CollectionViewCollection
         TItem previous = this[index];
 
         base.SetItem(index, item);
-
         DetachItem(previous);
-        AttachItem(item);
+
+        if (!isDisposed) AttachItem(item);
     }
 
     /// <summary>
@@ -228,7 +272,7 @@ public abstract class CollectionViewCollection
     {
         base.OnCollectionChanged(e);
 
-        RefreshViews();
+        if (!isDisposed) RefreshViews();
     }
 
     private void InitializeExistingItemTracking()
@@ -246,6 +290,7 @@ public abstract class CollectionViewCollection
         }
 
         observedItems.Add(item, 1);
+
         item.PropertyChanged += ItemOnPropertyChanged;
     }
 
@@ -261,6 +306,7 @@ public abstract class CollectionViewCollection
         }
 
         observedItems.Remove(item);
+
         item.PropertyChanged -= ItemOnPropertyChanged;
     }
 

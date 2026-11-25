@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CollectionLib.Controls.Components.Group.GroupLineView">
+    <Grid x:Name="LayoutRoot" 
+          ColumnDefinitions="22,*" 
+          RowDefinitions="Auto,Auto"
+          ColumnSpacing="0" 
+          RowSpacing="0">
+        <GraphicsView x:Name="Connector" 
+                      Grid.RowSpan="2" 
+                      WidthRequest="22"
+                      HorizontalOptions="Fill" 
+                      VerticalOptions="Fill" 
+                      InputTransparent="True" />
+        <Border x:Name="Header" 
+                Grid.Column="1" 
+                Padding="9,6" 
+                Stroke="Transparent"
+                StrokeThickness="0" 
+                BackgroundColor="Transparent">
+            <Grid ColumnDefinitions="Auto,*,Auto" 
+                  ColumnSpacing="8" 
+                  VerticalOptions="Center">
+                <Image x:Name="Chevron" 
+                       WidthRequest="14" 
+                       HeightRequest="14"
+                       VerticalOptions="Center" 
+                       Aspect="AspectFit" />
+                <Label x:Name="TitleLabel" 
+                       Grid.Column="1" 
+                       FontSize="12" 
+                       FontAttributes="Bold"
+                       VerticalTextAlignment="Center" 
+                       LineBreakMode="TailTruncation"
+                       TextColor="{AppThemeBinding Light=#344256, Dark=#E9EEF5}" />
+                <Border Grid.Column="2" 
+                        Padding="7,2" 
+                        BackgroundColor="Transparent"
+                        StrokeThickness="0" 
+                        VerticalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    
+                    <Label x:Name="CountLabel" 
+                           FontSize="10" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#52647B, Dark=#DCE7F4}"
+                           VerticalTextAlignment="Center" />
+                </Border>
+            </Grid>
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="10" />
+            </Border.StrokeShape>
+        </Border>
+        <VerticalStackLayout 
+            x:Name="ChildrenHost" 
+            Grid.Column="1" 
+            Grid.Row="1"      
+            Spacing="3" 
+            Padding="0,4" 
+            IsVisible="True" />
+    </Grid>
+</ContentView>

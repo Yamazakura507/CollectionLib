@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<VerticalStackLayout xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    x:Class="CollectionLib.Controls.Components.Picker.HsvColorPickerView"
+                    Spacing="5" 
+                    Padding="28,4,4,9">
+    <Border x:Name="Preview" 
+            HeightRequest="30" 
+            StrokeThickness="1">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="7" />
+        </Border.StrokeShape>
+    </Border>
+    <Label x:Name="ValueLabel" 
+           FontSize="10"
+           TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+    <Label Text="Оттенок" 
+           FontSize="10" 
+           TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+    <Slider x:Name="HueSlider" 
+            Minimum="0" 
+            Maximum="360" 
+            ValueChanged="OnSliderChanged"
+            MinimumTrackColor="#5987C8" ThumbColor="#5987C8" />
+    <Label Text="Насыщенность" 
+           FontSize="10" 
+           TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+    <Slider x:Name="SaturationSlider" 
+            Minimum="0" 
+            Maximum="1" 
+            ValueChanged="OnSliderChanged"
+            MinimumTrackColor="#5987C8" ThumbColor="#5987C8" />
+    <Label Text="Яркость" 
+           FontSize="10" 
+           TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+    <Slider x:Name="BrightnessSlider" 
+            Minimum="0.15" Maximum="1" 
+            ValueChanged="OnSliderChanged"
+            MinimumTrackColor="#5987C8" ThumbColor="#5987C8" />
+</VerticalStackLayout>

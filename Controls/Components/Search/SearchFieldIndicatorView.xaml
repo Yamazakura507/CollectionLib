@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CollectionLib.Controls.Components.Search.SearchFieldIndicatorView">
+    <Border x:Name="IndicatorBorder" 
+            Padding="9,3" 
+            HeightRequest="25" 
+            StrokeThickness="1">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="8" />
+        </Border.StrokeShape>
+        <Label x:Name="IndicatorText" 
+               FontSize="10"
+               VerticalTextAlignment="Center" 
+               HorizontalTextAlignment="Center" />
+    </Border>
+</ContentView>

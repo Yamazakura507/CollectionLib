@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<VerticalStackLayout xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                    x:Class="CollectionLib.Controls.Components.Picker.ListImagePickerView"
+                    Spacing="7" Padding="28,5,4,9">
+    <Border x:Name="ChooseSurface" 
+            Padding="10" 
+            StrokeThickness="1"
+            BackgroundColor="{AppThemeBinding Light=#F7FAFE, Dark=#252E39}"
+            Stroke="{AppThemeBinding Light=#D5E0ED, Dark=#4A596B}">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="12" />
+        </Border.StrokeShape>
+        <Grid ColumnDefinitions="Auto,*" 
+              ColumnSpacing="11" 
+              VerticalOptions="Center">
+            <Border WidthRequest="42" 
+                    HeightRequest="42" 
+                    Padding="9" 
+                    StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#E7F0FC, Dark=#35465B}">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10" />
+                </Border.StrokeShape>
+                <Image x:Name="PickerIcon" 
+                       Aspect="AspectFit" />
+            </Border>
+            <VerticalStackLayout Grid.Column="1" 
+                                 Spacing="3" 
+                                 VerticalOptions="Center">
+                <Label Text="Выбрать изображение" 
+                       FontSize="12" 
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#20242A, Dark=#F1F3F5}" />
+                <Label Text="PNG, JPG, JPEG, BMP или GIF" 
+                       FontSize="10"
+                       TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+            </VerticalStackLayout>
+        </Grid>
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnChooseTapped" />
+        </Border.GestureRecognizers>
+    </Border>
+    <Label x:Name="StatusLabel" 
+           FontSize="10" 
+           LineBreakMode="TailTruncation"
+           TextColor="{AppThemeBinding Light=#68717D, Dark=#A7AFBA}" />
+</VerticalStackLayout>

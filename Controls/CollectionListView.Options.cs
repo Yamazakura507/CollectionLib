@@ -1,26 +1,19 @@
 using System.ComponentModel;
-using Microsoft.Maui.Controls.Shapes;
+using CollectionLib.Controls.Components;
+using CollectionLib.Controls.Components.Picker;
+using CollectionLib.Controls.Components.Search;
 using CollectionLib.Enums;
 using CollectionLib.Models;
 using CollectionLib.Resources.ExtensionResources;
 using GroupLib.Models;
 using SortLib.Enums;
 using SortLib.Models;
-using WhereLib.Enums;
 using WhereLib.Models;
 
 namespace CollectionLib.Controls;
 
 public abstract partial class CollectionListView<
-    TItem,
-    TFilterParameter,
-    TSearchParameter,
-    TGroupParameter,
-    TSortParameter,
-    TFilterRule,
-    TSearchRule,
-    TGroupRule,
-    TSortRule>
+    TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
     where TItem : class, INotifyPropertyChanged
     where TFilterParameter : struct, Enum
     where TSearchParameter : struct, Enum
@@ -41,7 +34,9 @@ public abstract partial class CollectionListView<
     protected virtual string GetSortKindDisplayName(SortKind kind) => kind.ToString();
 
     protected virtual void OnAppendAdditionalFilterOptions() { }
+
     protected virtual void ClearAdditionalFilterState() { }
+
     protected virtual void AppendAdditionalCentralOptions() { }
 
     protected virtual void OnBuildCentralContext()
@@ -100,35 +95,19 @@ public abstract partial class CollectionListView<
 
         AddPopupOptionSection(
             "РЎРѕРїРѕСЃС‚Р°РІР»РµРЅРёРµ",
-            [ strictOption ],
+            new[] { strictOption },
             addDivider: false,
             appendContent: section =>
             {
-                Label accuracyLabel = new()
+                SearchAccuracyOptionsView accuracyOptions = new();
+                accuracyOptions.SetAccuracy(ItemsSource.SearchOptions.MaxLevenshteinDistance);
+                accuracyOptions.AccuracyChanged += (_, value) =>
                 {
-                    Text = $"РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ СЂР°СЃСЃС‚РѕСЏРЅРёРµ Р›РµРІРµРЅС€С‚РµР№РЅР°: {ItemsSource.SearchOptions.MaxLevenshteinDistance}",
-                    FontSize = 12,
-                    Margin = new Thickness(2, 7, 2, 1),
-                    TextColor = PopupTextColor
-                };
-                Slider accuracySlider = new()
-                {
-                    Minimum = 0,
-                    Maximum = 8,
-                    Value = ItemsSource.SearchOptions.MaxLevenshteinDistance,
-                    MinimumTrackColor = Color.FromArgb("#5987C8"),
-                    ThumbColor = Color.FromArgb("#5987C8")
-                };
-                accuracySlider.ValueChanged += (_, args) =>
-                {
-                    int value = (int)Math.Round(args.NewValue);
                     viewController?.SetMaximumLevenshteinDistance(value);
-                    accuracyLabel.Text = $"РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ СЂР°СЃСЃС‚РѕСЏРЅРёРµ Р›РµРІРµРЅС€С‚РµР№РЅР°: {value}";
                     UpdateSearchSettingsVisuals();
                 };
 
-                section.Children.Add(accuracyLabel);
-                section.Children.Add(accuracySlider);
+                section.Children.Add(accuracyOptions);
             });
 
         AddPopupText("Р РµР¶РёРј Рё СЂРµРіРёСЃС‚СЂ РїРµСЂРµРєР»СЋС‡Р°СЋС‚СЃСЏ РёРєРѕРЅРєР°РјРё СЃРїСЂР°РІР° РѕС‚ СЃС‚СЂРѕРєРё РїРѕРёСЃРєР°.");
@@ -148,29 +127,18 @@ public abstract partial class CollectionListView<
 
         viewController?.SynchronizeSelectedSortKind();
 
-        AddCollapsibleSection("РђР»РіРѕСЂРёС‚Рј СЃРѕСЂС‚РёСЂРѕРІРєРё", section =>
+        SortKind[] algorithms = Enum.GetValues<SortKind>();
+        AddCollapsibleSection("Sorting algorithm", section =>
         {
-            SortKind[] algorithms = Enum.GetValues<SortKind>();
-
-            Picker algorithmPicker = new()
+            SortAlgorithmPickerView picker = new();
+            picker.Configure(algorithms.Select(GetSortKindDisplayName), Array.IndexOf(algorithms, selectedSortKind));
+            picker.SelectionChanged += (_, selectedIndex) =>
             {
-                Title = "Р’С‹Р±РµСЂРёС‚Рµ Р°Р»РіРѕСЂРёС‚Рј",
-                FontSize = 12,
-                ItemsSource = algorithms.Select(GetSortKindDisplayName).ToList(),
-                SelectedIndex = Array.IndexOf(algorithms, selectedSortKind)
-            };
-            algorithmPicker.SelectedIndexChanged += (_, _) =>
-            {
-                int selectedIndex = algorithmPicker.SelectedIndex;
-
-                if (selectedIndex < 0 || ItemsSource is null) return;
-
+                if (ItemsSource is null) return;
                 selectedSortKind = algorithms[selectedIndex];
             };
-
-            section.Children.Add(algorithmPicker);
+            section.Children.Add(picker);
         });
-
         SynchronizeSortParameterOrder();
 
         CollectionListOptionDescriptor[] sortOptions = sortParameterOrder
@@ -241,6 +209,7 @@ public abstract partial class CollectionListView<
         if (ItemsSource is not { Count: > 0 })
         {
             AddPopupText("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ С„РёР»СЊС‚СЂР°С†РёРё.");
+
             return;
         }
 
@@ -475,214 +444,25 @@ public abstract partial class CollectionListView<
 
     private VerticalStackLayout BuildColorPickerPanel(Color initialColor, Action<Color> colorChanged)
     {
-        VerticalStackLayout panel = new()
-        {
-            Spacing = 5,
-            Padding = new Thickness(28, 4, 4, 9)
-        };
+        HsvColorPickerView picker = new();
 
-        Border preview = new()
-        {
-            HeightRequest = 30,
-            Stroke = Application.Current?.RequestedTheme == AppTheme.Dark ? Color.FromArgb("#606A78") : Color.FromArgb("#D2D8E0"),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 7 },
-            BackgroundColor = initialColor
-        };
-        Label valueLabel = new()
-        {
-            Text = initialColor.ToString(),
-            FontSize = 10,
-            TextColor = PopupMutedColor
-        };
+        picker.Configure(initialColor);
 
-        (double initialHue, double initialSaturation, double initialBrightness) = GetHsv(initialColor);
+        picker.ColorChanged += (_, color) => colorChanged(color);
 
-        Slider hue = new()
-        {
-            Minimum = 0,
-            Maximum = 360,
-            Value = initialHue,
-            MinimumTrackColor = Color.FromArgb("#5987C8"),
-            ThumbColor = Color.FromArgb("#5987C8")
-        };
-        Slider saturation = new()
-        {
-            Minimum = 0,
-            Maximum = 1,
-            Value = initialSaturation,
-            MinimumTrackColor = Color.FromArgb("#5987C8"),
-            ThumbColor = Color.FromArgb("#5987C8")
-        };
-        Slider brightness = new()
-        {
-            Minimum = 0.15,
-            Maximum = 1,
-            Value = initialBrightness,
-            MinimumTrackColor = Color.FromArgb("#5987C8"),
-            ThumbColor = Color.FromArgb("#5987C8")
-        };
-
-        void AddSlider(string labelText, Slider slider)
-        {
-            panel.Children.Add(new Label
-            {
-                Text = labelText,
-                FontSize = 10,
-                TextColor = PopupMutedColor
-            });
-            panel.Children.Add(slider);
-        }
-        void ApplyColor()
-        {
-            Color color = ConvertHsvToColor(
-                (float)hue.Value,
-                (float)saturation.Value,
-                (float)brightness.Value);
-            preview.BackgroundColor = color;
-            valueLabel.Text = color.ToString();
-            colorChanged(color);
-        }
-
-        hue.ValueChanged += (_, _) => ApplyColor();
-        saturation.ValueChanged += (_, _) => ApplyColor();
-        brightness.ValueChanged += (_, _) => ApplyColor();
-
-        panel.Children.Add(preview);
-        panel.Children.Add(valueLabel);
-        AddSlider("РћС‚С‚РµРЅРѕРє", hue);
-        AddSlider("РќР°СЃС‹С‰РµРЅРЅРѕСЃС‚СЊ", saturation);
-        AddSlider("РЇСЂРєРѕСЃС‚СЊ", brightness);
-        return panel;
+        return picker;
     }
 
-    private static Color ConvertHsvToColor(float hue, float saturation, float value)
+    private ListImagePickerView BuildListImagePickerPanel()
     {
-        float chroma = value * saturation;
-        float sector = (hue % 360f) / 60f;
-        float secondComponent = chroma * (1 - Math.Abs(sector % 2 - 1));
+        ListImagePickerView picker = new();
+        picker.Configure(
+            GetIcon(CollectionListImageKeys.ListImage, "list_image.svg"),
+            ListBackgroundImageSource is not null);
 
-        (float red, float green, float blue) = (int)sector switch
-        {
-            0 => (chroma, secondComponent, 0f),
-            1 => (secondComponent, chroma, 0f),
-            2 => (0f, chroma, secondComponent),
-            3 => (0f, secondComponent, chroma),
-            4 => (secondComponent, 0f, chroma),
-            _ => (chroma, 0f, secondComponent)
-        };
+        picker.ChooseRequested += async (_, _) => await PickListBackgroundImageAsync();
 
-        float offset = value - chroma;
-
-        return new Color(red + offset, green + offset, blue + offset);
-    }
-
-    private static (double Hue, double Saturation, double Brightness) GetHsv(Color color)
-    {
-        double red = color.Red;
-        double green = color.Green;
-        double blue = color.Blue;
-        double maximum = Math.Max(red, Math.Max(green, blue));
-        double minimum = Math.Min(red, Math.Min(green, blue));
-        double delta = maximum - minimum;
-
-        double hue = 0;
-        if (delta > 0)
-        {
-            if (maximum == red) hue = 60 * (((green - blue) / delta) % 6);
-            else if (maximum == green) hue = 60 * (((blue - red) / delta) + 2);
-            else hue = 60 * (((red - green) / delta) + 4);
-        }
-
-        if (hue < 0) hue += 360;
-
-        double saturation = maximum <= 0 ? 0 : delta / maximum;
-
-        return (hue, saturation, maximum);
-    }
-
-    private VerticalStackLayout BuildListImagePickerPanel()
-    {
-        VerticalStackLayout panel = new()
-        {
-            Spacing = 7,
-            Padding = new Thickness(28, 5, 4, 9)
-        };
-
-        bool darkTheme = Application.Current?.RequestedTheme == AppTheme.Dark;
-
-        Grid pickerContent = new()
-        {
-            ColumnDefinitions = new ColumnDefinitionCollection
-            {
-                new(GridLength.Auto),
-                new(GridLength.Star)
-            },
-            ColumnSpacing = 11,
-            VerticalOptions = LayoutOptions.Center
-        };
-
-        Border iconTile = new()
-        {
-            WidthRequest = 42,
-            HeightRequest = 42,
-            Padding = 9,
-            BackgroundColor = darkTheme ? Color.FromArgb("#35465B") : Color.FromArgb("#E7F0FC"),
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 10 },
-            Content = new Image
-            {
-                Source = GetIcon(CollectionListImageKeys.ListImage, "list_image.svg"),
-                Aspect = Aspect.AspectFit
-            }
-        };
-        pickerContent.Children.Add(iconTile);
-
-        VerticalStackLayout labels = new()
-        {
-            Spacing = 3,
-            VerticalOptions = LayoutOptions.Center
-        };
-        labels.Children.Add(new Label
-        {
-            Text = "Р’С‹Р±СЂР°С‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёРµ",
-            FontSize = 12,
-            FontAttributes = FontAttributes.Bold,
-            TextColor = PopupTextColor
-        });
-        labels.Children.Add(new Label
-        {
-            Text = "PNG, JPG, JPEG, BMP РёР»Рё GIF",
-            FontSize = 10,
-            TextColor = PopupMutedColor
-        });
-        Grid.SetColumn(labels, 1);
-        pickerContent.Children.Add(labels);
-
-        Border chooseSurface = new()
-        {
-            Padding = new Thickness(10),
-            Stroke = darkTheme ? Color.FromArgb("#4A596B") : Color.FromArgb("#D5E0ED"),
-            StrokeThickness = 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 12 },
-            BackgroundColor = darkTheme ? Color.FromArgb("#252E39") : Color.FromArgb("#F7FAFE"),
-            Content = pickerContent
-        };
-        chooseSurface.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(async () => await PickListBackgroundImageAsync()) });
-        ToolTipProperties.SetText(chooseSurface, "Р’С‹Р±СЂР°С‚СЊ Р»РѕРєР°Р»СЊРЅРѕРµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ РґР»СЏ С„РѕРЅР° СЃРїРёСЃРєР°");
-
-        listImageStatusLabel = new Label
-        {
-            Text = ListBackgroundImageSource is null ? "РР·РѕР±СЂР°Р¶РµРЅРёРµ РЅРµ РІС‹Р±СЂР°РЅРѕ" : "РР·РѕР±СЂР°Р¶РµРЅРёРµ РІС‹Р±СЂР°РЅРѕ",
-            FontSize = 10,
-            LineBreakMode = LineBreakMode.TailTruncation,
-            TextColor = PopupMutedColor
-        };
-
-        panel.Children.Add(chooseSurface);
-        panel.Children.Add(listImageStatusLabel);
-
-        return panel;
+        return picker;
     }
 
     protected void SetItemBackgroundMode(CollectionItemBackgroundMode mode)
@@ -810,7 +590,7 @@ public abstract partial class CollectionListView<
 
             ListBackgroundImageSource = ImageSource.FromStream(() => File.OpenRead(destinationPath));
 
-            if (listImageStatusLabel is not null) listImageStatusLabel.Text = selectedFileName;
+            listImagePickerPanel?.SetStatus(selectedFileName);
 
             ListBackgroundMode = CollectionListBackgroundMode.Image;
 
@@ -838,7 +618,6 @@ public abstract partial class CollectionListView<
         SetPopupOptionState($"group:{parameter}",
             selected ? CollectionListImageKeys.ListStateEnabled : CollectionListImageKeys.ListStateDisabled,
             selected ? "list_state_enabled.svg" : "list_state_disabled.svg");
-
         UpdateAppliedIndicators();
     }
 
@@ -931,7 +710,6 @@ public abstract partial class CollectionListView<
             : next.Value
                 ? CollectionListImageKeys.ListStateYes
                 : CollectionListImageKeys.ListStateNo;
-
         string iconFile = next is null
             ? "list_state_all.svg"
             : next.Value
@@ -1001,17 +779,9 @@ public abstract partial class CollectionListView<
     {
         if (!isActive) return;
 
-        Image indicator = new()
-        {
-            Source = GetIcon(resourceKey, fileName),
-            WidthRequest = 17,
-            HeightRequest = 17,
-            Aspect = Aspect.AspectFit,
-            Margin = new Thickness(2, 0),
-            Opacity = 0.9
-        };
+        AppliedIndicatorView indicator = new();
 
-        ToolTipProperties.SetText(indicator, tooltip);
+        indicator.Configure(GetIcon(resourceKey, fileName), tooltip);
         AppliedIndicators.Children.Add(indicator);
     }
 }

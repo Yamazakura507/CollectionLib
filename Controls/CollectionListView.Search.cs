@@ -6,19 +6,12 @@ using CollectionLib.Resources;
 using CollectionLib.Resources.ExtensionResources;
 using ResourcesLib.Resolvers;
 using WhereLib.Enums;
+using CollectionLib.Controls.Components.Search;
 
 namespace CollectionLib.Controls;
 
 public abstract partial class CollectionListView<
-    TItem,
-    TFilterParameter,
-    TSearchParameter,
-    TGroupParameter,
-    TSortParameter,
-    TFilterRule,
-    TSearchRule,
-    TGroupRule,
-    TSortRule>
+    TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
     where TItem : class, INotifyPropertyChanged
     where TFilterParameter : struct, Enum
     where TSearchParameter : struct, Enum
@@ -214,24 +207,9 @@ public abstract partial class CollectionListView<
         foreach (TSearchParameter parameter in SearchParameterValues.Where(selectedSearchParameters.Contains))
         {
             Color accent = GetSearchParameterColor(parameter);
-            Border indicator = new()
-            {
-                Padding = new Thickness(9, 3),
-                HeightRequest = 25,
-                Stroke = accent.WithAlpha(0.58f),
-                StrokeThickness = 1,
-                BackgroundColor = accent.WithAlpha(0.12f),
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
-                Content = new Label
-                {
-                    Text = SearchParameterNameSelector(parameter),
-                    FontSize = 10,
-                    TextColor = accent,
-                    VerticalTextAlignment = TextAlignment.Center,
-                    HorizontalTextAlignment = TextAlignment.Center
-                }
-            };
+            SearchFieldIndicatorView indicator = new();
 
+            indicator.Configure(SearchParameterNameSelector(parameter), accent);
             SearchFieldsStrip.Children.Add(indicator);
         }
     }
@@ -241,6 +219,7 @@ public abstract partial class CollectionListView<
         if (searchParameterColors.TryGetValue(parameter, out Color? cachedColor) && cachedColor is not null) return cachedColor;
 
         Color color = SearchParameterPalette[Random.Shared.Next(SearchParameterPalette.Length)];
+
         searchParameterColors.Add(parameter, color);
 
         return color;
@@ -277,10 +256,11 @@ public abstract partial class CollectionListView<
         if (viewController is null) return;
 
         viewController.RebuildSearchRules(SearchEntry.Text);
+
         OnCollectionControllerStateChanged();
     }
 
-    private async Task ShowSearchPanelAsync()
+    private async ValueTask ShowSearchPanelAsync()
     {
         if (isSearchVisible)
         {
@@ -297,7 +277,7 @@ public abstract partial class CollectionListView<
         SearchEntry.Focus();
     }
 
-    private async Task HideSearchPanelAsync()
+    private async ValueTask HideSearchPanelAsync()
     {
         if (!isSearchVisible || isSearchSettingsOpen) return;
 
@@ -319,6 +299,7 @@ public abstract partial class CollectionListView<
     private void SearchEntryOnTextChanged(object? sender, TextChangedEventArgs e)
     {
         SearchClearButton.IsVisible = !string.IsNullOrEmpty(e.NewTextValue);
+
         RebuildSearchRules();
     }
 
@@ -341,6 +322,7 @@ public abstract partial class CollectionListView<
     private async void SearchEntryOnUnfocused(object? sender, FocusEventArgs e)
     {
         SearchInputBorder.StrokeThickness = 1;
+
         if (isProgrammaticSearchHide || isSearchSettingsOpen || isSearchActionPressed) return;
 
         await Task.Delay(120);
@@ -378,6 +360,7 @@ public abstract partial class CollectionListView<
         if (ItemsSource is null) return;
 
         isSearchActionPressed = true;
+
         viewController?.SetMaximumLevenshteinDistance((ItemsSource.SearchOptions.MaxLevenshteinDistance + 1) % 9);
         UpdateSearchSettingsVisuals();
         _ = RestoreSearchEntryFocusAsync();

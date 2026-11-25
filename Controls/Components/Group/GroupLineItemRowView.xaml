@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CollectionLib.Controls.Components.Group.GroupLineItemRowView">
+    <Grid x:Name="LayoutRoot" 
+          ColumnDefinitions="22,*" 
+          ColumnSpacing="0" 
+          MinimumHeightRequest="42">
+        <GraphicsView x:Name="Connector" 
+                      WidthRequest="22" 
+                      HeightRequest="42"
+                      HorizontalOptions="Fill" 
+                      VerticalOptions="Fill" 
+                      InputTransparent="True" />
+        <ContentView x:Name="ItemHost" 
+                     Grid.Column="1" />
+    </Grid>
+</ContentView>
