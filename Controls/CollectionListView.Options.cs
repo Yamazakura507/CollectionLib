@@ -380,7 +380,9 @@ public abstract partial class CollectionListView<
             {
                 itemColorPickerPanel = BuildColorPickerPanel(
                     ItemBackgroundBrush ?? new SolidColorBrush(ItemBackgroundColor),
-                    brush => ApplySelectedBrush(brush, value => ItemBackgroundBrush = value, value => ItemBackgroundColor = value));
+                    ItemGradientMotionMode,
+                    brush => ApplySelectedBrush(brush, value => ItemBackgroundBrush = value, value => ItemBackgroundColor = value),
+                    mode => ItemGradientMotionMode = mode);
                 section.Children.Add(itemColorPickerPanel);
             });
 
@@ -441,7 +443,9 @@ public abstract partial class CollectionListView<
             {
                 listColorPickerPanel = BuildColorPickerPanel(
                     ListBackgroundBrush ?? new SolidColorBrush(ListBackgroundColor),
-                    brush => ApplySelectedBrush(brush, value => ListBackgroundBrush = value, value => ListBackgroundColor = value));
+                    ListGradientMotionMode,
+                    brush => ApplySelectedBrush(brush, value => ListBackgroundBrush = value, value => ListBackgroundColor = value),
+                    mode => ListGradientMotionMode = mode);
                
                 section.Children.Add(listColorPickerPanel);
                 
@@ -452,13 +456,18 @@ public abstract partial class CollectionListView<
         UpdateViewOptionStates();
     }
 
-    private ColorBrushPickerView BuildColorPickerPanel(Brush initialBrush, Action<Brush> brushChanged)
+    private ColorBrushPickerView BuildColorPickerPanel(
+        Brush initialBrush,
+        GradientMotionMode initialMotionMode,
+        Action<Brush> brushChanged,
+        Action<GradientMotionMode> motionModeChanged)
     {
         ColorBrushPickerView picker = new();
 
-        picker.Configure(initialBrush);
+        picker.Configure(initialBrush, initialMotionMode);
 
         picker.BrushChanged += (_, brush) => brushChanged(brush);
+        picker.GradientMotionModeChanged += motionModeChanged;
 
         return picker;
     }
@@ -483,9 +492,17 @@ public abstract partial class CollectionListView<
         ListImagePickerView picker = new();
         picker.Configure(
             GetIcon(CollectionListImageKeys.ListImage, "list_image.svg"),
-            ListBackgroundImageSource is not null);
+            ListBackgroundImageSource is not null,
+            SavingsBackgroundOptions is not null,
+            SavingsBackgroundOptions?.IsSave == true,
+            GetIcon(CollectionListImageKeys.PickerSaveOn, "picker_save_on.svg"),
+            GetIcon(CollectionListImageKeys.PickerSaveOff, "picker_save_off.svg"));
 
         picker.ChooseRequested += async (_, _) => await PickListBackgroundImageAsync();
+        picker.SaveToggled += enabled =>
+        {
+            if (SavingsBackgroundOptions is { } options) options.IsSave = enabled;
+        };
 
         return picker;
     }
@@ -548,7 +565,15 @@ public abstract partial class CollectionListView<
 
         if (itemColorPickerPanel is not null) itemColorPickerPanel.IsVisible = ItemBackgroundMode == CollectionItemBackgroundMode.Custom;
         if (listColorPickerPanel is not null) listColorPickerPanel.IsVisible = ListBackgroundMode == CollectionListBackgroundMode.Custom;
-        if (listImagePickerPanel is not null) listImagePickerPanel.IsVisible = ListBackgroundMode == CollectionListBackgroundMode.Image;
+        if (listImagePickerPanel is not null)
+        {
+            bool imageMode = ListBackgroundMode == CollectionListBackgroundMode.Image;
+            bool saveAvailable = SavingsBackgroundOptions is not null;
+            listImagePickerPanel.IsVisible = imageMode || saveAvailable;
+            listImagePickerPanel.SetImagePickerAvailability(imageMode);
+            listImagePickerPanel.SetSaveAvailability(saveAvailable);
+            listImagePickerPanel.SetSaveState(SavingsBackgroundOptions?.IsSave == true);
+        }
     }
 
     private async ValueTask PickListBackgroundImageAsync()
@@ -613,13 +638,17 @@ public abstract partial class CollectionListView<
                 await destination.FlushAsync();
             }
 
-            ListBackgroundImageSource = ImageSource.FromStream(() => File.OpenRead(destinationPath));
+            SetBackgroundImageFile(destinationPath);
+
+            if (SavingsBackgroundOptions?.IsSave == true)
+                await PersistCurrentBackgroundImageAsync();
 
             listImagePickerPanel?.SetStatus(selectedFileName);
 
             ListBackgroundMode = CollectionListBackgroundMode.Image;
 
             ListBackgroundImage.InvalidateMeasure();
+            QueueBackgroundPersistence();
             UpdateViewOptionStates();
         }
         catch (Exception exception)

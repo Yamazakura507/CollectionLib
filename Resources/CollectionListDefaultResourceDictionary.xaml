@@ -99,6 +99,16 @@
     <x:String x:Key="CollectionLib.Images.List.StateNo">list_state_no.png</x:String>
     <x:String x:Key="CollectionLib.Images.List.StateAscending">list_state_ascending.png</x:String>
     <x:String x:Key="CollectionLib.Images.List.StateDescending">list_state_descending.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.ColorMode">picker_color.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.GradientMode">picker_gradient.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.AddStop">picker_add.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.RemoveStop">picker_remove.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.SaveOn">picker_save_on.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.SaveOff">picker_save_off.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.MotionNone">picker_motion_none.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.MotionFlow">picker_motion_flow.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.MotionRotate">picker_motion_rotate.png</x:String>
+    <x:String x:Key="CollectionLib.Images.Picker.MotionPulse">picker_motion_pulse.png</x:String>
 
     <resources:LottieResourceSettings
         x:Key="CollectionLib.Lotties.Close"

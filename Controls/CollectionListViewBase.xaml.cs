@@ -25,6 +25,8 @@ public abstract partial class CollectionListViewBase : ContentView
 {
     private const string PopupReorderPayloadKey = "CollectionListViewBase.ReorderPayload";
 
+    private readonly GradientBrushMotionAnimator itemBackgroundMotionAnimator;
+    private readonly GradientBrushMotionAnimator listBackgroundMotionAnimator;
     private readonly HashSet<VisualElement> itemBackgroundSurfaces = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<VisualElement> transitioningGroups = new(ReferenceEqualityComparer.Instance);
     private INotifyCollectionChanged? observedSourceCollection;
@@ -48,7 +50,53 @@ public abstract partial class CollectionListViewBase : ContentView
     /// <summary>
     /// Initializes the shared XAML resources used by popup controls.
     /// </summary>
-    protected CollectionListViewBase() => InitializeComponent();
+    protected CollectionListViewBase()
+    {
+        InitializeComponent();
+        itemBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
+        listBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
+    }
+
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+        ConfigureItemBackgroundMotion();
+        ConfigureListBackgroundMotion();
+    }
+
+    protected override void OnHandlerChanging(HandlerChangingEventArgs args)
+    {
+        if (args.NewHandler is null)
+        {
+            itemBackgroundMotionAnimator.Stop();
+            listBackgroundMotionAnimator.Stop();
+        }
+
+        base.OnHandlerChanging(args);
+    }
+
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+
+        if (propertyName == IsVisibleProperty.PropertyName)
+        {
+            ConfigureItemBackgroundMotion();
+            ConfigureListBackgroundMotion();
+        }
+    }
+
+    private void ConfigureItemBackgroundMotion()
+        => itemBackgroundMotionAnimator.Configure(
+            ItemBackgroundBrush,
+            ItemGradientMotionMode,
+            Handler is not null && IsVisible && ItemBackgroundMode == CollectionItemBackgroundMode.Custom);
+
+    private void ConfigureListBackgroundMotion()
+        => listBackgroundMotionAnimator.Configure(
+            ListBackgroundBrush,
+            ListGradientMotionMode,
+            Handler is not null && IsVisible && ListBackgroundMode == CollectionListBackgroundMode.Custom);
 
     /// <summary>
     /// Gets a theme-aware foreground color for popup text.
@@ -191,6 +239,15 @@ public abstract partial class CollectionListViewBase : ContentView
     }
 
     /// <summary>
+    /// Motion effect applied when the item background uses a linear gradient.
+    /// </summary>
+    public GradientMotionMode ItemGradientMotionMode
+    {
+        get => (GradientMotionMode)GetValue(ItemGradientMotionModeProperty);
+        set => SetValue(ItemGradientMotionModeProperty, value);
+    }
+
+    /// <summary>
     /// Background mode applied to the complete list viewport.
     /// </summary>
     public CollectionListBackgroundMode ListBackgroundMode
@@ -218,12 +275,31 @@ public abstract partial class CollectionListViewBase : ContentView
     }
 
     /// <summary>
+    /// Motion effect applied when the list viewport background uses a linear gradient.
+    /// </summary>
+    public GradientMotionMode ListGradientMotionMode
+    {
+        get => (GradientMotionMode)GetValue(ListGradientMotionModeProperty);
+        set => SetValue(ListGradientMotionModeProperty, value);
+    }
+
+    /// <summary>
     /// Image source used when <see cref="ListBackgroundMode"/> is Image.
     /// </summary>
     public ImageSource? ListBackgroundImageSource
     {
         get => (ImageSource?)GetValue(ListBackgroundImageSourceProperty);
         set => SetValue(ListBackgroundImageSourceProperty, value);
+    }
+
+    /// <summary>
+    /// Gets or sets optional per-list persistence settings for the background image and brushes.
+    /// When omitted, the background is not persisted.
+    /// </summary>
+    public SavingsBackgroundOptions? SavingsBackgroundOptions
+    {
+        get => (SavingsBackgroundOptions?)GetValue(SavingsBackgroundOptionsProperty);
+        set => SetValue(SavingsBackgroundOptionsProperty, value);
     }
 
     /// <summary>
@@ -291,6 +367,8 @@ public abstract partial class CollectionListViewBase : ContentView
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
+                control.ConfigureItemBackgroundMotion();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -305,6 +383,7 @@ public abstract partial class CollectionListViewBase : ContentView
                 if (!Equals(oldValue, newValue)) control.ItemBackgroundBrush = null;
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -317,6 +396,21 @@ public abstract partial class CollectionListViewBase : ContentView
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
+                control.ConfigureItemBackgroundMotion();
+                control.QueueBackgroundPersistence();
+            });
+
+    /// <summary>
+    /// Identifies the <see cref="ItemGradientMotionMode"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty ItemGradientMotionModeProperty =
+        BindableProperty.Create(nameof(ItemGradientMotionMode), typeof(GradientMotionMode),
+            typeof(CollectionListViewBase), GradientMotionMode.None,
+            propertyChanged: (bindable, oldValue, newValue) =>
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.ConfigureItemBackgroundMotion();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -330,6 +424,8 @@ public abstract partial class CollectionListViewBase : ContentView
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
+                control.ConfigureListBackgroundMotion();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -346,6 +442,7 @@ public abstract partial class CollectionListViewBase : ContentView
 
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -358,6 +455,21 @@ public abstract partial class CollectionListViewBase : ContentView
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
+                control.ConfigureListBackgroundMotion();
+                control.QueueBackgroundPersistence();
+            });
+
+    /// <summary>
+    /// Identifies the <see cref="ListGradientMotionMode"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty ListGradientMotionModeProperty =
+        BindableProperty.Create(nameof(ListGradientMotionMode), typeof(GradientMotionMode),
+            typeof(CollectionListViewBase), GradientMotionMode.None,
+            propertyChanged: (bindable, oldValue, newValue) =>
+            {
+                CollectionListViewBase control = (CollectionListViewBase)bindable;
+                control.ConfigureListBackgroundMotion();
+                control.QueueBackgroundPersistence();
             });
 
     /// <summary>
@@ -371,7 +483,16 @@ public abstract partial class CollectionListViewBase : ContentView
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
+                control.QueueBackgroundPersistence();
             });
+
+    /// <summary>
+    /// Identifies the <see cref="SavingsBackgroundOptions"/> bindable property.
+    /// </summary>
+    public static readonly BindableProperty SavingsBackgroundOptionsProperty =
+        BindableProperty.Create(nameof(SavingsBackgroundOptions), typeof(SavingsBackgroundOptions),
+            typeof(CollectionListViewBase), default(SavingsBackgroundOptions),
+            propertyChanged: OnSavingsBackgroundOptionsChanged);
 
     /// <summary>
     /// Creates a nested block-style group view from the shared GroupNode model.

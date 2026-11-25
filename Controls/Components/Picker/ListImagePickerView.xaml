@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <VerticalStackLayout xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-                    x:Class="CollectionLib.Controls.Components.Picker.ListImagePickerView"
-                    Spacing="7" Padding="28,5,4,9" xmlns:resources="clr-namespace:CollectionLib.Resources;assembly=CollectionLib">
+                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                     xmlns:resources="clr-namespace:CollectionLib.Resources;assembly=CollectionLib"
+                     x:Class="CollectionLib.Controls.Components.Picker.ListImagePickerView"
+                     Spacing="7"
+                     Padding="28,5,4,9">
     <VerticalStackLayout.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -11,7 +13,7 @@
         </ResourceDictionary>
     </VerticalStackLayout.Resources>
 
-    <Border x:Name="ChooseSurface" 
+    <Border x:Name="ChooseSurface"
             x:FieldModifier="internal"
             Padding="10"
             StrokeThickness="1"
@@ -20,9 +22,7 @@
         <Border.StrokeShape>
             <RoundRectangle CornerRadius="12" />
         </Border.StrokeShape>
-        <Grid ColumnDefinitions="Auto,*"
-              ColumnSpacing="11"
-              VerticalOptions="Center">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="11" VerticalOptions="Center">
             <Border WidthRequest="42"
                     HeightRequest="42"
                     Padding="9"
@@ -31,13 +31,11 @@
                 <Border.StrokeShape>
                     <RoundRectangle CornerRadius="10" />
                 </Border.StrokeShape>
-                <Image x:Name="PickerIcon" 
+                <Image x:Name="PickerIcon"
                        x:FieldModifier="internal"
                        Aspect="AspectFit" />
             </Border>
-            <VerticalStackLayout Grid.Column="1"
-                                 Spacing="3"
-                                 VerticalOptions="Center">
+            <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
                 <Label Text="Выбрать изображение"
                        FontSize="12"
                        FontAttributes="Bold"
@@ -51,9 +49,38 @@
             <TapGestureRecognizer Tapped="OnChooseTapped" />
         </Border.GestureRecognizers>
     </Border>
-    <Label x:Name="StatusLabel" 
+
+    <Label x:Name="StatusLabel"
            x:FieldModifier="internal"
            FontSize="10"
            LineBreakMode="TailTruncation"
            TextColor="{AppThemeBinding Light={StaticResource PopupMutedLight}, Dark={StaticResource PopupMutedDark}}" />
+
+    <Grid x:Name="SaveToggleRow"
+          x:FieldModifier="internal"
+          ColumnDefinitions="*,Auto"
+          ColumnSpacing="8"
+          IsVisible="False">
+        <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+            <Label Text="Запоминать фон"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource PopupTextLight}, Dark={StaticResource PopupTextDark}}" />
+            <Label Text="Сохранять изображение и цвета этого списка"
+                   FontSize="9"
+                   TextColor="{AppThemeBinding Light={StaticResource PopupMutedLight}, Dark={StaticResource PopupMutedDark}}" />
+        </VerticalStackLayout>
+        <ImageButton x:Name="SaveToggleButton"
+                     x:FieldModifier="internal"
+                     Grid.Column="1"
+                     WidthRequest="34"
+                     HeightRequest="34"
+                     MinimumWidthRequest="34"
+                     MinimumHeightRequest="34"
+                     Padding="5"
+                     BackgroundColor="Transparent"
+                     BorderWidth="0"
+                     Aspect="AspectFit"
+                     Clicked="OnSaveToggleClicked" />
+    </Grid>
 </VerticalStackLayout>

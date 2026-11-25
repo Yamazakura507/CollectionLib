@@ -110,4 +110,24 @@ public static class CollectionListImageKeys
     /// Resource key for the descending-sort direction icon.
     /// </summary>
     public const string ListStateDescending = "CollectionLib.Images.List.StateDescending";
+    /// <summary>Resource key for the solid-color picker mode icon.</summary>
+    public const string PickerColorMode = "CollectionLib.Images.Picker.ColorMode";
+    /// <summary>Resource key for the gradient picker mode icon.</summary>
+    public const string PickerGradientMode = "CollectionLib.Images.Picker.GradientMode";
+    /// <summary>Resource key for adding a gradient stop.</summary>
+    public const string PickerAddStop = "CollectionLib.Images.Picker.AddStop";
+    /// <summary>Resource key for removing a gradient stop.</summary>
+    public const string PickerRemoveStop = "CollectionLib.Images.Picker.RemoveStop";
+    /// <summary>Resource key for the enabled background-save icon.</summary>
+    public const string PickerSaveOn = "CollectionLib.Images.Picker.SaveOn";
+    /// <summary>Resource key for the disabled background-save icon.</summary>
+    public const string PickerSaveOff = "CollectionLib.Images.Picker.SaveOff";
+    /// <summary>Resource key for the static-gradient mode icon.</summary>
+    public const string PickerMotionNone = "CollectionLib.Images.Picker.MotionNone";
+    /// <summary>Resource key for the moving-gradient mode icon.</summary>
+    public const string PickerMotionFlow = "CollectionLib.Images.Picker.MotionFlow";
+    /// <summary>Resource key for the rotating-gradient mode icon.</summary>
+    public const string PickerMotionRotate = "CollectionLib.Images.Picker.MotionRotate";
+    /// <summary>Resource key for the pulsing-gradient mode icon.</summary>
+    public const string PickerMotionPulse = "CollectionLib.Images.Picker.MotionPulse";
 }

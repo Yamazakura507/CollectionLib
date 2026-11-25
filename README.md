@@ -150,7 +150,7 @@ Color properties remain supported for existing callers. Setting `ItemBackgroundC
 
 ## Color and gradient backgrounds
 
-The view-options popup includes a shared color editor with a saturation/value plane, hue spectrum, HEX and RGB inputs, and preset swatches. Switch to gradient mode to edit a linear gradient with 2–8 color stops, stop positions and direction presets.
+The view-options popup includes a shared color editor with a saturation/value plane, hue spectrum, HEX and RGB inputs, and preset swatches. Color and gradient modes use icon buttons with tooltips. Gradient mode supports 2–5 colors, controlled by a color-count slider or the add/remove buttons; the maximum is fixed in the control. Quick gradients replace the quick-color palette while gradient mode is active. Gradient motion can be switched between static (default), flowing, rotating and pulsing effects using icon buttons with tooltips. Motion settings are exposed as `ItemGradientMotionMode` and `ListGradientMotionMode` and are stored with the optional background persistence settings. Stops use circular selectors, a position slider and an angle slider. The picker draws its saturation/value plane and hue spectrum with gradient paints rather than per-cell color loops.
 
 Both picker instances return a `Brush`, so gradients can be used for item surfaces and the list viewport. The same properties are also available to callers:
 
@@ -170,6 +170,25 @@ ItemBackgroundBrush = new SolidColorBrush(Colors.AliceBlue);
 ```
 
 The old `HsvColorPickerView` type remains as a compatibility wrapper; new code should use `ColorBrushPickerView`.
+
+## Background persistence
+
+Background persistence is opt-in and scoped to one list instance. Leave `SavingsBackgroundOptions` unset to hide the save toggle and keep the existing non-persistent behavior. When configured, `Path` is the directory for this list, and `SaveFileName` is its dedicated image file name. CollectionLib stores the image at that path and writes the brush/mode settings to a JSON sidecar named `SaveFileName + ".json"`.
+
+```csharp
+using CollectionLib.Models;
+using Microsoft.Maui.Storage;
+
+var backgroundStorage = new SavingsBackgroundOptions
+{
+    Path = Path.Combine(FileSystem.AppDataDirectory, "CollectionBackgrounds", "orders"),
+    SaveFileName = "orders-background.png"
+};
+
+ordersList.SavingsBackgroundOptions = backgroundStorage;
+```
+
+The view-options section then shows an icon toggle for saving. Enabling it persists the selected image and both item/list background modes, solid colors and linear gradients. The save-enabled state is also remembered, so the same list restores its settings after the application restarts. Give every list a separate directory or file name to keep its settings independent. Disabling persistence stops automatic restore on the next launch; previously written files are left in place.
 
 ## Notification handling
 
