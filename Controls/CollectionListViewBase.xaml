@@ -2,7 +2,7 @@
 <ContentView
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:resources="clr-namespace:CollectionLib.Resources"
+    xmlns:resources="clr-namespace:CollectionLib.Resources;assembly=CollectionLib"
     x:Class="CollectionLib.Controls.CollectionListViewBase"
     x:Name="Root" 
     x:FieldModifier="protected"

@@ -2,7 +2,7 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:defaults="clr-namespace:CollectionLib.Resources"
+    xmlns:defaults="clr-namespace:CollectionLib.Resources;assembly=CollectionLib"
     x:Class="CollectionLib.Resources.CollectionPopupStyles">
 
     <ResourceDictionary.MergedDictionaries>
@@ -43,7 +43,6 @@
     <Style x:Key="CollectionEditorEntryStyle" TargetType="Entry">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="HeightRequest" Value="34" />
-        <Setter Property="Padding" Value="8,4" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PopupSurfaceLight}, Dark={StaticResource PopupSurfaceDark}}" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource PopupTextLight}, Dark={StaticResource PopupTextDark}}" />
         <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource PopupMutedLight}, Dark={StaticResource PopupMutedDark}}" />
@@ -80,18 +79,18 @@
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource PopupBorderLight}, Dark={StaticResource PopupBorderDark}}" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource PopupSurfaceLight}, Dark={StaticResource PopupSurfaceDark}}" />
     </Style>
-    <Style x:Key="ActionBarImageButton" TargetType="ImageButton" BasedOn="{DynamicResource BaseImageButton}">
-        <Setter Property="WidthRequest" Value="34"/>
-        <Setter Property="HeightRequest" Value="34"/>
-    </Style>
-    <Style x:Key="SearchBarImageButton" TargetType="ImageButton" BasedOn="{DynamicResource BaseImageButton}">
-        <Setter Property="WidthRequest" Value="32"/>
-        <Setter Property="HeightRequest" Value="34"/>
-    </Style>
     <Style x:Key="BaseImageButton" TargetType="ImageButton">
-        <Setter Property="Padding" Value="7"/>
-        <Setter Property="BackgroundColor" Value="Transparent"/>
-        <Setter Property="BorderWidth" Value="0"/>
-        <Setter Property="Aspect" Value="AspectFit"/>
+        <Setter Property="Padding" Value="7" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="BorderWidth" Value="0" />
+        <Setter Property="Aspect" Value="AspectFit" />
+    </Style>
+    <Style x:Key="ActionBarImageButton" TargetType="ImageButton" BasedOn="{StaticResource BaseImageButton}">
+        <Setter Property="WidthRequest" Value="34" />
+        <Setter Property="HeightRequest" Value="34" />
+    </Style>
+    <Style x:Key="SearchBarImageButton" TargetType="ImageButton" BasedOn="{StaticResource BaseImageButton}">
+        <Setter Property="WidthRequest" Value="32" />
+        <Setter Property="HeightRequest" Value="34" />
     </Style>
 </ResourceDictionary>
