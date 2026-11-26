@@ -1,5 +1,7 @@
 using System.Globalization;
 using CollectionLib.Enums;
+using CollectionLib.Models.Draw;
+using CollectionLib.Models.Piker;
 using CollectionLib.Resources.ExtensionResources;
 
 namespace CollectionLib.Controls.Components.Picker;
@@ -12,9 +14,9 @@ public partial class ColorBrushPickerView : ContentView
 {
     private readonly List<EditableGradientStop> gradientStops = [];
     private Color selectedColor = CollectionListColors.Get("SearchAccent1");
-    private double hue;
-    private double saturation = 0.65;
-    private double brightness = 1;
+    internal double hue;
+    internal double saturation = 0.65;
+    internal double brightness = 1;
     private bool isGradient;
     private bool isUpdatingControls;
     private int selectedStopIndex;
@@ -38,12 +40,27 @@ public partial class ColorBrushPickerView : ContentView
     private Point gradientStart = new(0, 0.5);
     private Point gradientEnd = new(1, 0.5);
 
+    /// <summary>
+    /// Occurs when the selected solid color or gradient brush changes.
+    /// </summary>
     public event EventHandler<Brush>? BrushChanged;
+    /// <summary>
+    /// Occurs when the selected gradient motion mode changes.
+    /// </summary>
     public event Action<GradientMotionMode>? GradientMotionModeChanged;
 
+    /// <summary>
+    /// Gets the currently selected solid-color or gradient brush.
+    /// </summary>
     public Brush SelectedBrush => CreateBrush();
+    /// <summary>
+    /// Gets the currently selected gradient animation mode.
+    /// </summary>
     public GradientMotionMode SelectedGradientMotionMode => gradientMotionMode;
 
+    /// <summary>
+    /// Initializes the color and gradient brush picker.
+    /// </summary>
     public ColorBrushPickerView()
     {
         InitializeComponent();
@@ -63,6 +80,7 @@ public partial class ColorBrushPickerView : ContentView
         ToolTipProperties.SetText(MotionFlowButton, "Скольжение цветов");
         ToolTipProperties.SetText(MotionRotateButton, "Вращение градиента");
         ToolTipProperties.SetText(MotionPulseButton, "Пульсация градиента");
+
         BuildQuickGradientPresets();
 
         UpdateControls();
@@ -71,8 +89,7 @@ public partial class ColorBrushPickerView : ContentView
     /// <summary>
     /// Loads an existing brush without changing the owning control's background.
     /// </summary>
-    public void Configure(Brush? initialBrush)
-        => Configure(initialBrush, GradientMotionMode.None);
+    public void Configure(Brush? initialBrush) => Configure(initialBrush, GradientMotionMode.None);
 
     /// <summary>
     /// Loads an existing brush and its optional gradient-motion mode.
@@ -196,9 +213,7 @@ public partial class ColorBrushPickerView : ContentView
     private void OnGradientMotionModeClicked(object? sender, EventArgs e)
     {
         if (sender is not ImageButton { CommandParameter: string value }
-            || !Enum.TryParse(value, true, out GradientMotionMode mode))
-            return;
-
+            || !Enum.TryParse(value, true, out GradientMotionMode mode)) return;
         if (gradientMotionMode == mode) return;
 
         gradientMotionMode = mode;
@@ -206,6 +221,7 @@ public partial class ColorBrushPickerView : ContentView
         Brush previewBrush = CreateBrush();
         BrushPreview.Background = previewBrush;
         GradientPreview.Background = previewBrush;
+
         RaiseBrushChanged(previewBrush);
         GradientMotionModeChanged?.Invoke(mode);
         UpdateControls();
@@ -239,7 +255,9 @@ public partial class ColorBrushPickerView : ContentView
             };
 
             ToolTipProperties.SetText(button, preset.Name);
+
             button.Clicked += (_, _) => ApplyGradientPreset(preset);
+
             QuickGradientsHost.Children.Add(button);
         }
     }
@@ -247,13 +265,17 @@ public partial class ColorBrushPickerView : ContentView
     private void ApplyGradientPreset(GradientPreset preset)
     {
         isGradient = true;
+
         gradientStops.Clear();
         gradientStops.Add(new EditableGradientStop(0, preset.Start));
         gradientStops.Add(new EditableGradientStop(0.5, preset.Middle));
         gradientStops.Add(new EditableGradientStop(1, preset.End));
+
         selectedStopIndex = 0;
         selectedColor = preset.Start;
+
         SetGradientAngle(0);
+
         (hue, saturation, brightness) = GetHsv(selectedColor);
 
         UpdateControls();
@@ -266,11 +288,8 @@ public partial class ColorBrushPickerView : ContentView
 
         int requestedCount = Math.Clamp((int)Math.Round(e.NewValue), 2, MaximumGradientStops);
 
-        while (gradientStops.Count < requestedCount)
-            AddGradientStop();
-
-        while (gradientStops.Count > requestedCount)
-            RemoveGradientStop();
+        while (gradientStops.Count < requestedCount) AddGradientStop();
+        while (gradientStops.Count > requestedCount) RemoveGradientStop();
 
         selectedStopIndex = Math.Clamp(selectedStopIndex, 0, gradientStops.Count - 1);
         selectedColor = gradientStops[selectedStopIndex].Color;
@@ -290,6 +309,7 @@ public partial class ColorBrushPickerView : ContentView
         for (int index = 0; index < ordered.Count - 1; index++)
         {
             double gap = ordered[index + 1].Offset - ordered[index].Offset;
+
             if (gap <= largestGap) continue;
 
             largestGap = gap;
@@ -305,18 +325,16 @@ public partial class ColorBrushPickerView : ContentView
         if (gradientStops.Count <= 2) return;
 
         int removeIndex = gradientStops.Count - 2;
+
         gradientStops.RemoveAt(removeIndex);
 
-        if (selectedStopIndex == removeIndex)
-            selectedStopIndex = Math.Min(removeIndex, gradientStops.Count - 1);
-        else if (selectedStopIndex > removeIndex)
-            selectedStopIndex--;
+        if (selectedStopIndex == removeIndex) selectedStopIndex = Math.Min(removeIndex, gradientStops.Count - 1);
+        else if (selectedStopIndex > removeIndex) selectedStopIndex--;
     }
 
     private void TrimGradientStopsToMaximum()
     {
-        while (gradientStops.Count > MaximumGradientStops)
-            RemoveGradientStop();
+        while (gradientStops.Count > MaximumGradientStops) RemoveGradientStop();
     }
 
     private void OnGradientAngleValueChanged(object? sender, ValueChangedEventArgs e)
@@ -325,9 +343,12 @@ public partial class ColorBrushPickerView : ContentView
 
         SetGradientAngle(e.NewValue);
         UpdateGradientAngleValue();
+
         Brush previewBrush = CreateBrush();
+
         GradientPreview.Background = previewBrush;
         BrushPreview.Background = previewBrush;
+
         RaiseBrushChanged(previewBrush);
     }
 
@@ -338,6 +359,7 @@ public partial class ColorBrushPickerView : ContentView
         if (gradientStops.Count >= MaximumGradientStops) return;
 
         AddGradientStop();
+
         selectedStopIndex = gradientStops.Count - 1;
         selectedColor = gradientStops[selectedStopIndex].Color;
         (hue, saturation, brightness) = GetHsv(selectedColor);
@@ -351,9 +373,11 @@ public partial class ColorBrushPickerView : ContentView
         if (gradientStops.Count <= 2 || selectedStopIndex < 0 || selectedStopIndex >= gradientStops.Count) return;
 
         gradientStops.RemoveAt(selectedStopIndex);
+
         selectedStopIndex = Math.Clamp(selectedStopIndex, 0, gradientStops.Count - 1);
         selectedColor = gradientStops[selectedStopIndex].Color;
         (hue, saturation, brightness) = GetHsv(selectedColor);
+
         UpdateControls();
         RaiseBrushChanged();
     }
@@ -380,6 +404,7 @@ public partial class ColorBrushPickerView : ContentView
         Brush previewBrush = CreateBrush();
         GradientPreview.Background = previewBrush;
         BrushPreview.Background = previewBrush;
+
         RaiseBrushChanged(previewBrush);
     }
 
@@ -391,13 +416,17 @@ public partial class ColorBrushPickerView : ContentView
         if (isGradient && selectedStopIndex >= 0 && selectedStopIndex < gradientStops.Count)
         {
             gradientStops[selectedStopIndex].Color = color;
+
             UpdateSelectedGradientStop();
         }
 
         UpdateColorValueEntries();
+
         Brush previewBrush = CreateBrush();
         BrushPreview.Background = previewBrush;
+
         if (isGradient) GradientPreview.Background = previewBrush;
+
         ColorPlane.Invalidate();
 
         if (invalidateHueSpectrum) HueSpectrum.Invalidate();
@@ -408,21 +437,31 @@ public partial class ColorBrushPickerView : ContentView
     private void UpdateControls()
     {
         isUpdatingControls = true;
-        ColorModeButton.BackgroundColor = isGradient
-            ? CollectionListColors.ForTheme("PopupSurfaceLight", "PopupSurfaceDark")
-            : CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark");
-        GradientModeButton.BackgroundColor = isGradient
-            ? CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark")
-            : CollectionListColors.ForTheme("PopupSurfaceLight", "PopupSurfaceDark");
-        ColorModeButton.Opacity = isGradient ? 0.72 : 1;
-        GradientModeButton.Opacity = isGradient ? 1 : 0.72;
+
+        if (isGradient)
+        {
+            ColorModeButton.BackgroundColor = CollectionListColors.ForTheme("PopupSurfaceLight", "PopupSurfaceDark");
+            GradientModeButton.BackgroundColor = CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark");
+            ColorModeButton.Opacity = 0.72;
+            GradientModeButton.Opacity = 1;
+        }
+        else
+        {
+            ColorModeButton.BackgroundColor = CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark");
+            GradientModeButton.BackgroundColor = CollectionListColors.ForTheme("PopupSurfaceLight", "PopupSurfaceDark");
+            ColorModeButton.Opacity = 1;
+            GradientModeButton.Opacity = 0.72;
+        }
+        
 
         UpdateColorValueEntries();
-        Brush previewBrush = isGradient && currentGradientBrush is not null
-            ? currentGradientBrush
-            : CreateBrush();
+
+        Brush previewBrush = isGradient && currentGradientBrush is not null ? currentGradientBrush : CreateBrush();
+
         BrushPreview.Background = previewBrush;
+
         if (isGradient) GradientPreview.Background = previewBrush;
+
         ColorPlane.Invalidate();
         HueSpectrum.Invalidate();
 
@@ -430,7 +469,9 @@ public partial class ColorBrushPickerView : ContentView
         QuickColorsSection.IsVisible = !isGradient;
         QuickGradientsSection.IsVisible = isGradient;
         GradientMotionSection.IsVisible = isGradient;
+
         UpdateGradientMotionModeButtons();
+
         GradientStopCountSlider.Value = gradientStops.Count;
         GradientStopCountValue.Text = gradientStops.Count.ToString(CultureInfo.InvariantCulture);
         AddGradientStopButton.IsEnabled = gradientStops.Count < MaximumGradientStops;
@@ -455,15 +496,22 @@ public partial class ColorBrushPickerView : ContentView
 
     private static void UpdateMotionButton(ImageButton button, bool selected)
     {
-        button.BackgroundColor = selected
-            ? CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark")
-            : Colors.Transparent;
-        button.Opacity = selected ? 1 : 0.68;
+        if (selected) 
+        {
+            button.BackgroundColor = CollectionListColors.ForTheme("AccentSoftLight", "AccentSoftDark");
+            button.Opacity = 1;
+        }
+        else
+        {
+            button.BackgroundColor = Colors.Transparent;
+            button.Opacity = 0.68;
+        }
     }
 
     private void UpdateColorValueEntries()
     {
         bool wasUpdating = isUpdatingControls;
+
         isUpdatingControls = true;
         HexEntry.Text = ToHex(selectedColor);
         RgbEntry.Text = $"{ToByte(selectedColor.Red)}, {ToByte(selectedColor.Green)}, {ToByte(selectedColor.Blue)}";
@@ -482,6 +530,7 @@ public partial class ColorBrushPickerView : ContentView
                 Text = string.Empty,
                 CommandParameter = index,
                 BackgroundColor = stop.Color,
+
                 BorderColor = index == selectedStopIndex
                     ? CollectionListColors.Get("Accent")
                     : CollectionListColors.ForTheme("PopupBorderLight", "PopupBorderDark"),
@@ -493,7 +542,9 @@ public partial class ColorBrushPickerView : ContentView
                 MinimumWidthRequest = 26,
                 MinimumHeightRequest = 26
             };
+
             button.Clicked += OnGradientStopClicked;
+
             ToolTipProperties.SetText(button, $"Цвет {index + 1}, позиция {Math.Round(stop.Offset * 100):0}%");
             GradientStopsHost.Children.Add(button);
         }
@@ -504,7 +555,6 @@ public partial class ColorBrushPickerView : ContentView
     private void UpdateSelectedGradientStop()
     {
         if (selectedStopIndex < 0 || selectedStopIndex >= GradientStopsHost.Children.Count) return;
-
         if (GradientStopsHost.Children[selectedStopIndex] is Button button)
             button.BackgroundColor = gradientStops[selectedStopIndex].Color;
     }
@@ -564,8 +614,7 @@ public partial class ColorBrushPickerView : ContentView
         currentGradientBrush = isGradient ? selectedBrush as LinearGradientBrush : null;
 
         BrushPreview.Background = selectedBrush;
-        if (isGradient)
-            GradientPreview.Background = selectedBrush;
+        if (isGradient) GradientPreview.Background = selectedBrush;
 
         BrushChanged?.Invoke(this, selectedBrush);
     }
@@ -650,7 +699,7 @@ public partial class ColorBrushPickerView : ContentView
         return (valueHue, maximum <= 0 ? 0 : delta / maximum, maximum);
     }
 
-    private static Color FromHsv(double hueValue, double saturationValue, double brightnessValue)
+    internal static Color FromHsv(double hueValue, double saturationValue, double brightnessValue)
     {
         float chroma = (float)(brightnessValue * saturationValue);
         float sector = (float)(hueValue % 360) / 60f;
@@ -668,91 +717,5 @@ public partial class ColorBrushPickerView : ContentView
         float offset = (float)brightnessValue - chroma;
 
         return new Color(red + offset, green + offset, blue + offset);
-    }
-
-    private sealed record GradientPreset(string Name, Color Start, Color Middle, Color End);
-
-    private sealed class EditableGradientStop(double offset, Color color)
-    {
-        public double Offset { get; set; } = offset;
-        public Color Color { get; set; } = color;
-    }
-
-    private sealed class SaturationValueDrawable(ColorBrushPickerView owner) : IDrawable
-    {
-        private double cachedHue = double.NaN;
-        private LinearGradientPaint? horizontalPaint;
-        private static readonly LinearGradientPaint ValueOverlay = new(
-            [
-                new PaintGradientStop(0, Colors.Transparent),
-                new PaintGradientStop(1, Colors.Black)
-            ],
-            new Point(0.5, 0),
-            new Point(0.5, 1));
-
-        public void Draw(ICanvas canvas, RectF dirtyRect)
-        {
-            if (dirtyRect.Width <= 0 || dirtyRect.Height <= 0) return;
-
-            if (horizontalPaint is null || Math.Abs(cachedHue - owner.hue) > 0.001)
-            {
-                cachedHue = owner.hue;
-                horizontalPaint = new LinearGradientPaint(
-                    [
-                        new PaintGradientStop(0, Colors.White),
-                        new PaintGradientStop(1, FromHsv(owner.hue, 1, 1))
-                    ],
-                    new Point(0, 0.5),
-                    new Point(1, 0.5));
-            }
-
-            canvas.SetFillPaint(horizontalPaint, dirtyRect);
-            canvas.FillRectangle(dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
-
-            canvas.SetFillPaint(ValueOverlay, dirtyRect);
-            canvas.FillRectangle(dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
-
-            float markerX = dirtyRect.X + (float)(owner.saturation * dirtyRect.Width);
-            float markerY = dirtyRect.Y + (float)((1 - owner.brightness) * dirtyRect.Height);
-
-            canvas.StrokeSize = 3;
-            canvas.StrokeColor = Colors.Black;
-            canvas.DrawCircle(markerX, markerY, 6);
-            canvas.StrokeSize = 1.5f;
-            canvas.StrokeColor = Colors.White;
-            canvas.DrawCircle(markerX, markerY, 6);
-        }
-    }
-
-    private sealed class HueSpectrumDrawable(ColorBrushPickerView owner) : IDrawable
-    {
-        private static readonly LinearGradientPaint HuePaint = new(
-            [
-                new PaintGradientStop(0, Colors.Red),
-                new PaintGradientStop(1f / 6f, Colors.Yellow),
-                new PaintGradientStop(2f / 6f, Colors.Lime),
-                new PaintGradientStop(3f / 6f, Colors.Cyan),
-                new PaintGradientStop(4f / 6f, Colors.Blue),
-                new PaintGradientStop(5f / 6f, Colors.Magenta),
-                new PaintGradientStop(1, Colors.Red)
-            ],
-            new Point(0, 0.5),
-            new Point(1, 0.5));
-
-        public void Draw(ICanvas canvas, RectF dirtyRect)
-        {
-            if (dirtyRect.Width <= 0 || dirtyRect.Height <= 0) return;
-
-            canvas.SetFillPaint(HuePaint, dirtyRect);
-            canvas.FillRectangle(dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
-
-            float markerX = dirtyRect.X + (float)(owner.hue / 360d * dirtyRect.Width);
-            canvas.StrokeColor = Colors.Black;
-            canvas.StrokeSize = 3;
-            canvas.DrawLine(markerX, dirtyRect.Y, markerX, dirtyRect.Bottom);
-            canvas.StrokeColor = Colors.White;
-            canvas.StrokeSize = 1;
-            canvas.DrawLine(markerX, dirtyRect.Y, markerX, dirtyRect.Bottom);
-        }
     }
 }

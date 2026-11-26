@@ -8,7 +8,7 @@ using ResourcesLib.Resolvers;
 using WhereLib.Enums;
 using CollectionLib.Controls.Components.Search;
 
-namespace CollectionLib.Controls;
+namespace CollectionLib.Controls.Abstract;
 
 public abstract partial class CollectionListView<
     TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
@@ -22,39 +22,52 @@ public abstract partial class CollectionListView<
     where TGroupRule : GroupRule<TGroupParameter>, new()
     where TSortRule : SortRule<TSortParameter>, new()
 {
-    protected enum PopupKind
-    {
-        None,
-        Central,
-        Types,
-        SearchOptions,
-        Sort,
-        Filter,
-        Group,
-        View
-    }
-
     private readonly Dictionary<TSearchParameter, Color> searchParameterColors = [];
     private static readonly Color[] SearchParameterPalette = CollectionListColors.GetPalette(
         "SearchAccent1", "SearchAccent2", "SearchAccent3",
         "SearchAccent4", "SearchAccent5", "SearchAccent6");
 
+    /// <summary>
+    /// Gets or sets whether the search panel is currently visible.
+    /// </summary>
     protected bool isSearchVisible;
+    /// <summary>
+    /// Gets or sets whether the search settings popup is currently open.
+    /// </summary>
     protected bool isSearchSettingsOpen;
     private bool isSearchActionPressed;
     private bool isProgrammaticSearchHide;
 
+    /// <summary>
+    /// Provides additional resource keys to try when resolving a shared collection-list icon.
+    /// </summary>
+    /// <param name="resourceKey">The primary icon resource key.</param>
+    /// <returns>The resource keys to try in addition to the default dictionary.</returns>
     protected virtual IEnumerable<string> GetAdditionalImageResourceKeys(string resourceKey)
     {
         yield return resourceKey;
     }
 
+    /// <summary>
+    /// Resolves an icon from the collection-list resources and configured fallback sources.
+    /// </summary>
+    /// <param name="resourceKey">The resource key of the requested icon.</param>
+    /// <param name="defaultFileName">The fallback image file name.</param>
+    /// <returns>The resolved image source.</returns>
     protected ImageSource GetIcon(string resourceKey, string defaultFileName) => ImageResourceResolver.Get(
             resourceKey,
             defaultFileName,
             CollectionListDefaultResourceDictionary.Instance,
             GetAdditionalImageResourceKeys(resourceKey));
 
+    /// <summary>
+    /// Creates a consistently styled icon button for collection-list actions.
+    /// </summary>
+    /// <param name="resourceKey">The resource key of the button icon.</param>
+    /// <param name="defaultFileName">The fallback image file name.</param>
+    /// <param name="tooltip">The tooltip displayed for the button.</param>
+    /// <param name="size">The requested width and height of the button.</param>
+    /// <returns>The configured icon button.</returns>
     protected ImageButton CreateIconButton(string resourceKey, string defaultFileName, string tooltip, double size = 34)
     {
         ImageButton button = new()
@@ -138,15 +151,43 @@ public abstract partial class CollectionListView<
         HeaderIcon.IsVisible = Icon is not null;
     }
 
+    /// <summary>
+    /// Refreshes the visible header after its title, icon, or dock-title configuration changes.
+    /// </summary>
     protected override void OnHeaderConfigurationChanged() => UpdateHeader();
 
+    /// <summary>
+    /// Provides a hook for derived controls to respond to changes in the additional header area size.
+    /// </summary>
     protected virtual void OnAdditionalHeaderSizeChanged() { }
+    /// <summary>
+    /// Provides a hook invoked when the sort action is requested.
+    /// </summary>
     protected virtual void OnSortRequested() { }
+    /// <summary>
+    /// Provides a hook invoked when the filter action is requested.
+    /// </summary>
     protected virtual void OnFilterRequested() { }
+    /// <summary>
+    /// Provides a hook invoked when the group action is requested.
+    /// </summary>
     protected virtual void OnGroupRequested() { }
+    /// <summary>
+    /// Provides a hook invoked when the view and background action is requested.
+    /// </summary>
     protected virtual void OnViewRequested() { }
+    /// <summary>
+    /// Provides a hook invoked when the search settings action is requested.
+    /// </summary>
     protected virtual void OnSearchOptionsRequested() { }
+    /// <summary>
+    /// Provides a hook invoked when the active popup backdrop is tapped.
+    /// </summary>
     protected virtual void OnPopupBackdropRequested() { }
+    /// <summary>
+    /// Provides a hook for updating domain-specific controls when the source collection availability changes.
+    /// </summary>
+    /// <param name="hasItems">Indicates whether the source collection currently contains items.</param>
     protected virtual void OnAdditionalControlsAvailabilityChanged(bool hasItems) { }
 
     private void RootOnSizeChanged(object? sender, EventArgs e)
@@ -157,6 +198,10 @@ public abstract partial class CollectionListView<
 
     private void MessagesOnSecondaryTapped(object? sender, TappedEventArgs e) => OnCentralContextRequested(e.GetPosition(PopupLayer));
 
+    /// <summary>
+    /// Provides a hook invoked when the central context action is requested.
+    /// </summary>
+    /// <param name="position">The optional position of the pointer or tap within the popup layer.</param>
     protected virtual void OnCentralContextRequested(Point? position) { }
 
     private void ClearHistoryButtonOnClicked(object? sender, EventArgs e) => _ = ClearHistoryAsync();
@@ -176,6 +221,10 @@ public abstract partial class CollectionListView<
         if (confirmed) ItemsSource.Clear();
     }
 
+    /// <summary>
+    /// Finds the page that hosts this control, falling back to the first application window page.
+    /// </summary>
+    /// <returns>The hosting page, or <see langword="null"/> when no page is available.</returns>
     protected Page? FindParentPage()
     {
         Element? current = this;
@@ -190,10 +239,20 @@ public abstract partial class CollectionListView<
         return Application.Current?.Windows.FirstOrDefault()?.Page;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the search panel is currently visible.
+    /// </summary>
     protected bool IsSearchPanelVisible => isSearchVisible;
 
+    /// <summary>
+    /// Determines whether the specified search field is available for the current collection.
+    /// </summary>\n/// <param name="parameter">The search field to check.</param>
+    /// <returns><see langword="true"/> when the field can be selected for searching.</returns>
     protected virtual bool IsSearchParameterAvailable(TSearchParameter parameter) => ItemsSource is not null && ItemsSource.Count > 0;
 
+    /// <summary>
+    /// Rebuilds the indicators for the search fields currently selected.
+    /// </summary>
     protected void RenderSearchFieldIndicators()
     {
         SearchFieldsStrip.Children.Clear();
@@ -219,8 +278,17 @@ public abstract partial class CollectionListView<
         return color;
     }
 
+    /// <summary>
+    /// Updates the icon associated with a popup option state key.</summary>
+    /// <param name="stateKey">The key identifying the option visual.</param>
+    /// <param name="resourceKey">The resource key of the state icon.</param>
+    /// <param name="fileName">The fallback icon file name.</param>
     protected void SetPopupOptionState(string stateKey, string resourceKey, string fileName) => SetPopupOptionIcon(stateKey, GetIcon(resourceKey, fileName));
 
+    /// <summary>
+    /// Toggles the selected state of a search field and rebuilds the active search rules.
+    /// </summary>
+    /// <param name="parameter">The search field to toggle.</param>
     protected void ToggleSearchParameter(TSearchParameter parameter)
     {
         if (viewController?.ToggleSearchParameter(parameter) != true) return;
@@ -235,6 +303,9 @@ public abstract partial class CollectionListView<
             selected ? "list_state_enabled.svg" : "list_state_disabled.svg");
     }
 
+    /// <summary>
+    /// Toggles strict search behavior in the attached collection controller.
+    /// </summary>
     protected void ToggleStrictSearch()
     {
         if (viewController is null) return;
@@ -245,6 +316,9 @@ public abstract partial class CollectionListView<
             isStrict ? "list_state_enabled.svg" : "list_state_disabled.svg");
     }
 
+    /// <summary>
+    /// Rebuilds the search rules using the current search entry text and selected fields.
+    /// </summary>
     protected void RebuildSearchRules()
     {
         if (viewController is null) return;
@@ -344,8 +418,7 @@ public abstract partial class CollectionListView<
     {
         if (ItemsSource is null) return;
 
-        viewController?.SetSearchMode(
-            ItemsSource.SearchOptions.Mode == SearchMode.Contains ? SearchMode.Levenshtein : SearchMode.Contains);
+        viewController?.SetSearchMode(ItemsSource.SearchOptions.Mode == SearchMode.Contains ? SearchMode.Levenshtein : SearchMode.Contains);
         UpdateSearchSettingsVisuals();
 
         _ = RestoreSearchEntryFocusAsync();
@@ -373,6 +446,9 @@ public abstract partial class CollectionListView<
         _ = RestoreSearchEntryFocusAsync();
     }
 
+    /// <summary>
+    /// Synchronizes search mode, accuracy, and case-sensitivity controls with the collection settings.
+    /// </summary>
     protected void UpdateSearchSettingsVisuals()
     {
         SearchMode mode = ItemsSource?.SearchOptions.Mode ?? SearchMode.Contains;

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using CollectionLib.Controls.Components;
 using CollectionLib.Controls.Components.Picker;
 using CollectionLib.Controls.Components.Search;
@@ -11,7 +12,7 @@ using SortLib.Enums;
 using SortLib.Models;
 using WhereLib.Models;
 
-namespace CollectionLib.Controls;
+namespace CollectionLib.Controls.Abstract;
 
 public abstract partial class CollectionListView<
     TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
@@ -28,18 +29,45 @@ public abstract partial class CollectionListView<
     private bool hasSynchronizedSortParameterOrder;
     private bool hasSynchronizedGroupParameterOrder;
 
+    /// <summary>
+    /// Determines whether the specified sort field is available for the current collection.
+    /// </summary>
+    /// <param name="parameter">The sort field to check.</param>
+    /// <returns><see langword="true"/> when the field can be used in the sorting options.</returns>
     protected virtual bool IsSortParameterAvailable(TSortParameter parameter) => ItemsSource?.Count > 0;
 
+    /// <summary>
+    /// Determines whether the specified filter field is available for the current collection.
+    /// </summary>
+    /// <param name="parameter">The filter field to check.</param>
+    /// <returns><see langword="true"/> when the field can be used in the filtering options.</returns>
     protected virtual bool IsFilterParameterAvailable(TFilterParameter parameter) => ItemsSource?.Count > 0;
 
+    /// <summary>
+    /// Gets the display name of a sorting algorithm.
+    /// </summary>
+    /// <param name="kind">The sorting algorithm to name.</param>
+    /// <returns>The display name shown in the sorting options.</returns>
     protected virtual string GetSortKindDisplayName(SortKind kind) => kind.ToString();
 
+    /// <summary>
+    /// Provides a hook for derived controls to append domain-specific filtering options.
+    /// </summary>
     protected virtual void OnAppendAdditionalFilterOptions() { }
 
+    /// <summary>
+    /// Provides a hook for derived controls to reset filter state not managed by the base collection controller.
+    /// </summary>
     protected virtual void ClearAdditionalFilterState() { }
 
+    /// <summary>
+    /// Provides a hook for derived controls to append commands to the central options popup.
+    /// </summary>
     protected virtual void AppendAdditionalCentralOptions() { }
 
+    /// <summary>
+    /// Builds the central popup containing the primary collection operations.
+    /// </summary>
     protected virtual void OnBuildCentralContext()
     {
         if (ItemsSource is not { Count: > 0 })
@@ -57,6 +85,9 @@ public abstract partial class CollectionListView<
         AppendAdditionalCentralOptions();
     }
 
+    /// <summary>
+    /// Builds the popup section that configures searchable fields and search behavior.
+    /// </summary>
     protected virtual void OnBuildSearchOptionsContext()
     {
         if (ItemsSource is not { Count: > 0 })
@@ -115,6 +146,9 @@ public abstract partial class CollectionListView<
         AddPopupText("Последнее выбранное поле поиска нельзя отключить.");
     }
 
+    /// <summary>
+    /// Builds the popup section that configures sort fields, their order, and the sorting algorithm.
+    /// </summary>
     protected virtual void OnBuildSortContext()
     {
         if (ItemsSource is not { Count: > 0 })
@@ -212,6 +246,9 @@ public abstract partial class CollectionListView<
         SetPopupOptionState($"sort:{parameter}", resourceKey, iconFile);
     }
 
+    /// <summary>
+    /// Builds the popup section that configures the collection filter rules.
+    /// </summary>
     protected virtual void OnBuildFilterContext()
     {
         if (ItemsSource is not { Count: > 0 })
@@ -256,6 +293,9 @@ public abstract partial class CollectionListView<
         clearFilterButton.IsVisible = ItemsSource.FilterRules.Count > 0;
     }
 
+    /// <summary>
+    /// Builds the popup section that configures grouping fields and their display mode.
+    /// </summary>
     protected virtual void OnBuildGroupContext()
     {
         if (ItemsSource is not { Count: > 0 })
@@ -320,6 +360,9 @@ public abstract partial class CollectionListView<
         clearGroupButton.IsVisible = ItemsSource.GroupRules.Count > 0;
     }
 
+    /// <summary>
+    /// Builds the popup section that configures item and list backgrounds.
+    /// </summary>
     protected virtual void OnBuildViewContext()
     {
         AddPopupText("Настройте подложку сообщений и фоновую поверхность списка.");
@@ -507,6 +550,10 @@ public abstract partial class CollectionListView<
         return picker;
     }
 
+    /// <summary>
+    /// Sets the background rendering mode used for individual item surfaces.
+    /// </summary>
+    /// <param name="mode">The item background mode to apply.</param>
     protected void SetItemBackgroundMode(CollectionItemBackgroundMode mode)
     {
         ItemBackgroundMode = mode;
@@ -514,6 +561,10 @@ public abstract partial class CollectionListView<
         UpdateViewOptionStates();
     }
 
+    /// <summary>
+    /// Sets the background rendering mode used for the list viewport.
+    /// </summary>
+    /// <param name="mode">The list background mode to apply.</param>
     protected void SetListBackgroundMode(CollectionListBackgroundMode mode)
     {
         ListBackgroundMode = mode;
@@ -521,20 +572,32 @@ public abstract partial class CollectionListView<
         UpdateViewOptionStates();
     }
 
+    /// <summary>
+    /// Refreshes view-option state after the item background configuration changes.
+    /// </summary>
     protected override void OnItemBackgroundConfigurationChanged()
     {
         base.OnItemBackgroundConfigurationChanged();
         UpdateViewOptionStates();
     }
 
+    /// <summary>
+    /// Refreshes view-option state after the list background configuration changes.
+    /// </summary>
     protected override void OnListBackgroundConfigurationChanged()
     {
         base.OnListBackgroundConfigurationChanged();
         UpdateViewOptionStates();
     }
 
+    /// <summary>
+    /// Provides a hook for derived controls to update the availability of custom popup options.
+    /// </summary>
     protected virtual void OnPopupOptionAvailabilityChanged() => UpdateViewOptionStates();
 
+    /// <summary>
+    /// Synchronizes the view popup icons with the currently selected background modes.
+    /// </summary>
     protected void UpdateViewOptionStates()
     {
         SetPopupOptionState("view:item:auto",
@@ -570,6 +633,7 @@ public abstract partial class CollectionListView<
             bool imageMode = ListBackgroundMode == CollectionListBackgroundMode.Image;
             bool saveAvailable = SavingsBackgroundOptions is not null;
             listImagePickerPanel.IsVisible = imageMode || saveAvailable;
+
             listImagePickerPanel.SetImagePickerAvailability(imageMode);
             listImagePickerPanel.SetSaveAvailability(saveAvailable);
             listImagePickerPanel.SetSaveState(SavingsBackgroundOptions?.IsSave == true);
@@ -608,7 +672,7 @@ public abstract partial class CollectionListView<
             if (selectedFile is null) return;
 
             selectedPath = selectedFile.Path;
-            selectedFileName = System.IO.Path.GetFileName(selectedPath);
+            selectedFileName = Path.GetFileName(selectedPath);
             #else
             FileResult? selectedFile = await FilePicker.Default.PickAsync(new PickOptions
             {
@@ -620,11 +684,11 @@ public abstract partial class CollectionListView<
 
             selectedFileName = selectedFile.FileName;
             #endif
-            string extension = System.IO.Path.GetExtension(selectedFileName);
+            string extension = Path.GetExtension(selectedFileName);
 
             if (string.IsNullOrWhiteSpace(extension)) extension = ".img";
 
-            string destinationPath = System.IO.Path.Combine(FileSystem.AppDataDirectory, $"message-list-background-{Guid.NewGuid():N}{extension}");
+            string destinationPath = Path.Combine(FileSystem.AppDataDirectory, $"message-list-background-{Guid.NewGuid():N}{extension}");
 
             await using (FileStream destination = new(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
             {
@@ -640,8 +704,7 @@ public abstract partial class CollectionListView<
 
             SetBackgroundImageFile(destinationPath);
 
-            if (SavingsBackgroundOptions?.IsSave == true)
-                await PersistCurrentBackgroundImageAsync();
+            if (SavingsBackgroundOptions?.IsSave == true) await PersistCurrentBackgroundImageAsync();
 
             listImagePickerPanel?.SetStatus(selectedFileName);
 
@@ -653,7 +716,7 @@ public abstract partial class CollectionListView<
         }
         catch (Exception exception)
         {
-            System.Diagnostics.Debug.WriteLine($"Unable to select list background image: {exception}");
+            Debug.WriteLine($"Unable to select list background image: {exception}");
             HandlerAction.Report(
                 "Ошибка выбора изображения",
                 $"Не удалось загрузить изображение. {exception.Message}",
@@ -713,6 +776,9 @@ public abstract partial class CollectionListView<
         UpdateOption("group-display:lines", CollectionGroupDisplayMode.Lines);
     }
 
+    /// <summary>
+    /// Removes the collection filter rules and clears filter state maintained by derived controls.
+    /// </summary>
     protected void ClearFilters()
     {
         if (ItemsSource is null) return;
@@ -728,6 +794,9 @@ public abstract partial class CollectionListView<
         RenderItems();
     }
 
+    /// <summary>
+    /// Removes the collection sort rules and resets the corresponding option indicators.
+    /// </summary>
     protected void ClearSorting()
     {
         viewController?.ClearSorting();
@@ -739,6 +808,9 @@ public abstract partial class CollectionListView<
         RenderItems();
     }
 
+    /// <summary>
+    /// Removes the collection grouping rules and resets the corresponding option indicators.
+    /// </summary>
     protected void ClearGrouping()
     {
         if (ItemsSource is null) return;
@@ -776,6 +848,11 @@ public abstract partial class CollectionListView<
         RenderItems();
     }
 
+    /// <summary>
+    /// Sets the value of a filter rule owned by this collection-list control.
+    /// </summary>
+    /// <param name="parameter">The filter field whose value is changed.</param>
+    /// <param name="value">The filter value; <see langword="null"/> clears the value for the field.</param>
     protected void SetOwnedFilter(TFilterParameter parameter, object? value) => viewController?.SetFilterValue(parameter, value);
 
     private void UpdateControlAvailability()
@@ -809,6 +886,9 @@ public abstract partial class CollectionListView<
         }
     }
 
+    /// <summary>
+    /// Refreshes the indicators that show which search, filter, sort, and grouping options are active.
+    /// </summary>
     protected void UpdateAppliedIndicators()
     {
         AppliedIndicators.Children.Clear();

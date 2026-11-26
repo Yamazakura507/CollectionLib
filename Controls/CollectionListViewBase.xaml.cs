@@ -13,6 +13,7 @@ using CollectionLib.Models.Popup;
 using CollectionLib.Controls.Components.Group;
 using CollectionLib.Resources.ExtensionResources;
 using CollectionLib.Models.Draw;
+using CollectionLib.Models.Animators;
 
 namespace CollectionLib.Controls;
 
@@ -36,67 +37,6 @@ public abstract partial class CollectionListViewBase : ContentView
     private Image? listBackgroundImage;
     private List<(VisualElement Element, Color Light, Color Dark)> themedBackgroundSurfaces = [];
     private VisualElement[] transparentBackgroundSurfaces = [];
-
-    /// <summary>
-    /// Gets the registered popup option visuals, indexed by descriptor key.
-    /// </summary>
-    protected Dictionary<string, CollectionPopupOptionVisual> PopupOptionVisuals { get; } = new(StringComparer.Ordinal);
-
-    /// <summary>
-    /// Gets the popup section visuals created by the derived control.
-    /// </summary>
-    protected List<CollectionPopupSectionVisual> PopupSectionVisuals { get; } = [];
-
-    /// <summary>
-    /// Initializes the shared XAML resources used by popup controls.
-    /// </summary>
-    protected CollectionListViewBase()
-    {
-        InitializeComponent();
-        itemBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
-        listBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
-    }
-
-    protected override void OnHandlerChanged()
-    {
-        base.OnHandlerChanged();
-        ConfigureItemBackgroundMotion();
-        ConfigureListBackgroundMotion();
-    }
-
-    protected override void OnHandlerChanging(HandlerChangingEventArgs args)
-    {
-        if (args.NewHandler is null)
-        {
-            itemBackgroundMotionAnimator.Stop();
-            listBackgroundMotionAnimator.Stop();
-        }
-
-        base.OnHandlerChanging(args);
-    }
-
-    protected override void OnPropertyChanged(string? propertyName = null)
-    {
-        base.OnPropertyChanged(propertyName);
-
-        if (propertyName == IsVisibleProperty.PropertyName)
-        {
-            ConfigureItemBackgroundMotion();
-            ConfigureListBackgroundMotion();
-        }
-    }
-
-    private void ConfigureItemBackgroundMotion()
-        => itemBackgroundMotionAnimator.Configure(
-            ItemBackgroundBrush,
-            ItemGradientMotionMode,
-            Handler is not null && IsVisible && ItemBackgroundMode == CollectionItemBackgroundMode.Custom);
-
-    private void ConfigureListBackgroundMotion()
-        => listBackgroundMotionAnimator.Configure(
-            ListBackgroundBrush,
-            ListGradientMotionMode,
-            Handler is not null && IsVisible && ListBackgroundMode == CollectionListBackgroundMode.Custom);
 
     /// <summary>
     /// Gets a theme-aware foreground color for popup text.
@@ -365,6 +305,7 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
                 control.ConfigureItemBackgroundMotion();
@@ -380,7 +321,9 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 if (!Equals(oldValue, newValue)) control.ItemBackgroundBrush = null;
+
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
                 control.QueueBackgroundPersistence();
@@ -394,6 +337,7 @@ public abstract partial class CollectionListViewBase : ContentView
             default(Brush), propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.RefreshItemBackgroundSurfaces();
                 control.OnItemBackgroundConfigurationChanged();
                 control.ConfigureItemBackgroundMotion();
@@ -409,6 +353,7 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.ConfigureItemBackgroundMotion();
                 control.QueueBackgroundPersistence();
             });
@@ -422,6 +367,7 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
                 control.ConfigureListBackgroundMotion();
@@ -453,6 +399,7 @@ public abstract partial class CollectionListViewBase : ContentView
             default(Brush), propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
                 control.ConfigureListBackgroundMotion();
@@ -468,6 +415,7 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.ConfigureListBackgroundMotion();
                 control.QueueBackgroundPersistence();
             });
@@ -481,6 +429,7 @@ public abstract partial class CollectionListViewBase : ContentView
             propertyChanged: (bindable, oldValue, newValue) =>
             {
                 CollectionListViewBase control = (CollectionListViewBase)bindable;
+
                 control.ApplyListBackgroundConfiguration();
                 control.OnListBackgroundConfigurationChanged();
                 control.QueueBackgroundPersistence();
@@ -493,6 +442,77 @@ public abstract partial class CollectionListViewBase : ContentView
         BindableProperty.Create(nameof(SavingsBackgroundOptions), typeof(SavingsBackgroundOptions),
             typeof(CollectionListViewBase), default(SavingsBackgroundOptions),
             propertyChanged: OnSavingsBackgroundOptionsChanged);
+
+    /// <summary>
+    /// Gets the registered popup option visuals, indexed by descriptor key.
+    /// </summary>
+    protected Dictionary<string, CollectionPopupOptionVisual> PopupOptionVisuals { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets the popup section visuals created by the derived control.
+    /// </summary>
+    protected List<CollectionPopupSectionVisual> PopupSectionVisuals { get; } = [];
+
+    /// <summary>
+    /// Initializes the shared XAML resources used by popup controls.
+    /// </summary>
+    protected CollectionListViewBase()
+    {
+        InitializeComponent();
+
+        itemBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
+        listBackgroundMotionAnimator = new GradientBrushMotionAnimator(Dispatcher);
+    }
+
+    /// <summary>
+    /// Configures the item and list background animations after the MAUI handler is attached.
+    /// </summary>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+        ConfigureItemBackgroundMotion();
+        ConfigureListBackgroundMotion();
+    }
+
+    /// <summary>
+    /// Stops background animations before the MAUI handler is detached.
+    /// </summary>
+    /// <param name="args">The handler transition details.</param>
+    protected override void OnHandlerChanging(HandlerChangingEventArgs args)
+    {
+        if (args.NewHandler is null)
+        {
+            itemBackgroundMotionAnimator.Stop();
+            listBackgroundMotionAnimator.Stop();
+        }
+
+        base.OnHandlerChanging(args);
+    }
+
+    /// <summary>
+    /// Reconfigures background animations when the control visibility changes.
+    /// </summary>
+    /// <param name="propertyName">The name of the changed bindable property.</param>
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+
+        if (propertyName == IsVisibleProperty.PropertyName)
+        {
+            ConfigureItemBackgroundMotion();
+            ConfigureListBackgroundMotion();
+        }
+    }
+
+    private void ConfigureItemBackgroundMotion() => itemBackgroundMotionAnimator.Configure(
+        ItemBackgroundBrush,
+        ItemGradientMotionMode,
+        Handler is not null && IsVisible && ItemBackgroundMode == CollectionItemBackgroundMode.Custom);
+
+    private void ConfigureListBackgroundMotion() => listBackgroundMotionAnimator.Configure(
+        ListBackgroundBrush,
+        ListGradientMotionMode,
+        Handler is not null && IsVisible && ListBackgroundMode == CollectionListBackgroundMode.Custom);
 
     /// <summary>
     /// Creates a nested block-style group view from the shared GroupNode model.
@@ -519,6 +539,7 @@ public abstract partial class CollectionListViewBase : ContentView
 
         foreach (GroupNode<TItem, TParameter> nested in group.Children)
             view.ChildrenHost.Children.Add(CreateBlockGroupView(nested, depth + 1, createItemView, getParameterName, formatGroupValue, getChevron));
+        
         foreach (TItem item in group.Items) view.ChildrenHost.Children.Add(createItemView(item));
 
         view.Header.GestureRecognizers.Add(new TapGestureRecognizer
@@ -536,6 +557,19 @@ public abstract partial class CollectionListViewBase : ContentView
         return view;
     }
 
+    /// <summary>
+    /// Creates a recursively nested line-style group view and its item rows.
+    /// </summary>
+    /// <typeparam name="TItem">The type of items contained in the group.</typeparam>
+    /// <typeparam name="TParameter">The enum type identifying the grouping parameter.</typeparam>
+    /// <param name="group">The group node to render.</param>
+    /// <param name="depth">The nesting depth used to indent the group.</param>
+    /// <param name="isLast">Indicates whether this group is the last child of its parent.</param>
+    /// <param name="createItemView">Creates the view for an item in the group.</param>
+    /// <param name="getParameterName">Gets the display name of the grouping parameter.</param>
+    /// <param name="formatGroupValue">Formats the value of the grouping parameter.</param>
+    /// <param name="getChevron">Gets the chevron image for the requested expanded state.</param>
+    /// <returns>The view representing the group and its descendants.</returns>
     protected View CreateLineGroupView<TItem, TParameter>(
         GroupNode<TItem, TParameter> group,
         int depth,
@@ -1143,8 +1177,7 @@ public abstract partial class CollectionListViewBase : ContentView
         control.OnViewControllerStateChanged();
     }
 
-    private static void OnHeaderConfigurationChanged(BindableObject bindable, object oldValue, object newValue)
-        => ((CollectionListViewBase)bindable).OnHeaderConfigurationChanged();
+    private static void OnHeaderConfigurationChanged(BindableObject bindable, object oldValue, object newValue) => ((CollectionListViewBase)bindable).OnHeaderConfigurationChanged();
 
     private static void OnGroupDisplayModeChanged(BindableObject bindable, object oldValue, object newValue)
     {

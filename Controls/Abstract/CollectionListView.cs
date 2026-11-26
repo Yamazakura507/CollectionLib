@@ -10,7 +10,7 @@ using SortLib.Enums;
 using SortLib.Models;
 using WhereLib.Models;
 
-namespace CollectionLib.Controls;
+namespace CollectionLib.Controls.Abstract;
 
 /// <summary>
 /// Typed collection-list implementation. It owns the collection/controller lifecycle, item-view
@@ -18,15 +18,7 @@ namespace CollectionLib.Controls;
 /// its rule/enum types, parameter lists, group labels and item-view factory.
 /// </summary>
 public abstract partial class CollectionListView<
-    TItem,
-    TFilterParameter,
-    TSearchParameter,
-    TGroupParameter,
-    TSortParameter,
-    TFilterRule,
-    TSearchRule,
-    TGroupRule,
-    TSortRule> : CollectionListViewBase
+    TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter, TFilterRule, TSearchRule, TGroupRule, TSortRule> : CollectionListViewBase
     where TItem : class, INotifyPropertyChanged
     where TFilterParameter : struct, Enum
     where TSearchParameter : struct, Enum
@@ -41,6 +33,19 @@ public abstract partial class CollectionListView<
     private readonly HashSet<TItem> observedItems = new(ReferenceEqualityComparer.Instance);
     private bool hasRenderedGroupedView;
 
+    /// <summary>
+    /// Initializes the generic collection list and configures its available search, sort, filter, and grouping parameters.
+    /// </summary>
+    /// <param name="searchParameters">The search fields supported by the collection.</param>
+    /// <param name="sortParameters">The sort fields supported by the collection.</param>
+    /// <param name="booleanFilterParameters">The Boolean filter fields supported by the collection.</param>
+    /// <param name="groupParameters">The fields that can be used to group items.</param>
+    /// <param name="getSearchParameterName">Resolves a display name for a search field.</param>
+    /// <param name="getSortParameterName">Resolves a display name for a sort field.</param>
+    /// <param name="getFilterParameterName">Resolves a display name for a filter field.</param>
+    /// <param name="getGroupParameterName">Resolves a display name for a grouping field.</param>
+    /// <param name="formatGroupValue">Formats a grouping field value for display.</param>
+    /// <exception cref="ArgumentNullException">A parameter collection or display-name formatter is <see langword="null"/>.</exception>
     protected CollectionListView(
         IEnumerable<TSearchParameter> searchParameters,
         IEnumerable<TSortParameter> sortParameters,
@@ -102,33 +107,84 @@ public abstract partial class CollectionListView<
         set => SetValue(ItemsSourceProperty, value);
     }
 
+    /// <summary>
+    /// Gets the distinct search fields supported by this collection list.
+    /// </summary>
     protected IReadOnlyList<TSearchParameter> SearchParameterValues { get; }
+    /// <summary>
+    /// Gets the distinct sort fields supported by this collection list.
+    /// </summary>
     protected IReadOnlyList<TSortParameter> SortParameterValues { get; }
+    /// <summary>
+    /// Gets the distinct Boolean filter fields supported by this collection list.
+    /// </summary>
     protected IReadOnlyList<TFilterParameter> BooleanFilterParameterValues { get; }
+    /// <summary>
+    /// Gets the distinct grouping fields supported by this collection list.
+    /// </summary>
     protected IReadOnlyList<TGroupParameter> GroupParameterValues { get; }
 
+    /// <summary>
+    /// Gets the delegate that resolves display names for search fields.
+    /// </summary>
     protected Func<TSearchParameter, string> SearchParameterNameSelector { get; }
+    /// <summary>
+    /// Gets the delegate that resolves display names for sort fields.
+    /// </summary>
     protected Func<TSortParameter, string> SortParameterNameSelector { get; }
+    /// <summary>
+    /// Gets the delegate that resolves display names for filter fields.
+    /// </summary>
     protected Func<TFilterParameter, string> FilterParameterNameSelector { get; }
+    /// <summary>
+    /// Gets the delegate that resolves display names for grouping fields.
+    /// </summary>
     protected Func<TGroupParameter, string> GroupParameterNameSelector { get; }
+    /// <summary>
+    /// Gets the delegate that formats grouping values for display.
+    /// </summary>
     protected Func<TGroupParameter, object?, string> GroupValueFormatter { get; }
 
+    /// <summary>
+    /// Gets the controller attached to the current source collection, or <see langword="null"/> when no collection is assigned.
+    /// </summary>
     protected CollectionViewController<
         TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
         TFilterRule, TSearchRule, TGroupRule, TSortRule>? viewController;
 
+    /// <summary>
+    /// Gets the mutable ordering of sort fields shown in the sorting options.
+    /// </summary>
     protected List<TSortParameter> sortParameterOrder;
+    /// <summary>
+    /// Gets the mutable ordering of grouping fields used to build nested groups.
+    /// </summary>
     protected List<TGroupParameter> groupParameterOrder;
+    /// <summary>
+    /// Gets the set of search fields currently selected for searching.
+    /// </summary>
     protected HashSet<TSearchParameter> selectedSearchParameters;
+    /// <summary>
+    /// Gets the filter rules created and managed by this list control.
+    /// </summary>
     protected Dictionary<TFilterParameter, TFilterRule> ownedFilterRules = [];
+    /// <summary>
+    /// Gets the search rules created and managed by this list control.
+    /// </summary>
     protected List<TSearchRule> ownedSearchRules = [];
 
+    /// <summary>
+    /// Gets or sets the sorting algorithm used by the attached collection controller.
+    /// </summary>
     protected SortKind SelectedSortKind
     {
         get => viewController?.SelectedSortKind ?? SortKind.Merge;
         set => viewController?.SetSortKind(value);
     }
 
+    /// <summary>
+    /// Gets or sets the selected sorting algorithm through the legacy protected member name.
+    /// </summary>
     protected SortKind selectedSortKind
     {
         get => SelectedSortKind;
@@ -176,6 +232,10 @@ public abstract partial class CollectionListView<
     /// </summary>
     protected virtual void OnFilteredCollectionChanged() { }
 
+    /// <summary>
+    /// Refreshes cached item views and renders the list after the source collection changes.
+    /// </summary>
+    /// <param name="e">The collection change notification.</param>
     protected override void OnCollectionSourceChanged(NotifyCollectionChangedEventArgs e)
     {
         RefreshItemViews();
@@ -184,6 +244,10 @@ public abstract partial class CollectionListView<
         OnSourceCollectionChanged();
     }
 
+    /// <summary>
+    /// Renders the updated flat result and refreshes applied-option indicators after filtering.
+    /// </summary>
+    /// <param name="e">The filtered-item collection change notification.</param>
     protected override void OnFilteredItemsChanged(NotifyCollectionChangedEventArgs e)
     {
         if (ItemsSource?.GroupRules.Count == 0) RenderItems();
@@ -192,18 +256,22 @@ public abstract partial class CollectionListView<
         OnFilteredCollectionChanged();
     }
 
+    /// <summary>
+    /// Refreshes grouped rendering when the source collection group structure changes.
+    /// </summary>
+    /// <param name="e">Details about the changed source-collection property.</param>
     protected override void OnCollectionSourcePropertyChanged(PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(CollectionViewCollection<
                 TItem, TFilterParameter, TSearchParameter, TGroupParameter, TSortParameter,
                 TFilterRule, TSearchRule, TGroupRule, TSortRule>.Groups)
             && ItemsSource is not null
-            && (ItemsSource.GroupRules.Count > 0 || hasRenderedGroupedView))
-        {
-            RenderItems();
-        }
+            && (ItemsSource.GroupRules.Count > 0 || hasRenderedGroupedView)) RenderItems();
     }
 
+    /// <summary>
+    /// Rebuilds grouped items using the newly selected group presentation mode.
+    /// </summary>
     protected override void OnGroupDisplayModeChanged()
     {
         RenderItems();
@@ -211,6 +279,9 @@ public abstract partial class CollectionListView<
         UpdateViewOptionStates();
     }
 
+    /// <summary>
+    /// Refreshes applied-option indicators and notifies derived controls when controller state changes.
+    /// </summary>
     protected override void OnViewControllerStateChanged()
     {
         base.OnViewControllerStateChanged();
@@ -356,6 +427,9 @@ public abstract partial class CollectionListView<
         return surface;
     }
 
+    /// <summary>
+    /// Rebuilds the item host using either the filtered flat collection or its grouped hierarchy.
+    /// </summary>
     protected void RenderItems()
     {
         if (MessagesHost is null || EmptyStateLabel is null) return;

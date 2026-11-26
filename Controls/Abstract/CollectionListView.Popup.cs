@@ -8,7 +8,7 @@ using CollectionLib.Resources.ExtensionResources;
 using CollectionLib.Controls.Components;
 using CollectionLib.Controls.Components.Picker;
 
-namespace CollectionLib.Controls;
+namespace CollectionLib.Controls.Abstract;
 
 public abstract partial class CollectionListView<
     TItem,TFilterParameter,TSearchParameter,TGroupParameter,TSortParameter,TFilterRule,TSearchRule,TGroupRule,TSortRule>
@@ -22,18 +22,54 @@ public abstract partial class CollectionListView<
     where TGroupRule : GroupRule<TGroupParameter>, new()
     where TSortRule : SortRule<TSortParameter>, new()
 {
+    /// <summary>
+    /// Gets the reset button currently displayed for sorting options, if present.
+    /// </summary>
     protected ImageButton? clearSortButton;
+    /// <summary>
+    /// Gets the reset button currently displayed for filtering options, if present.
+    /// </summary>
     protected ImageButton? clearFilterButton;
+    /// <summary>
+    /// Gets the reset button currently displayed for grouping options, if present.
+    /// </summary>
     protected ImageButton? clearGroupButton;
+    /// <summary>
+    /// Gets the item color-picker panel currently hosted by the view popup, if present.
+    /// </summary>
     protected View? itemColorPickerPanel;
+    /// <summary>
+    /// Gets the list color-picker panel currently hosted by the view popup, if present.
+    /// </summary>
     protected View? listColorPickerPanel;
+    /// <summary>
+    /// Gets the list background image picker currently hosted by the view popup, if present.
+    /// </summary>
     protected ListImagePickerView? listImagePickerPanel;
+    /// <summary>
+    /// Gets the status label associated with the list background image picker, if present.
+    /// </summary>
     protected Label? listImageStatusLabel;
 
+    /// <summary>
+    /// Gets the kind of popup that is currently active.
+    /// </summary>
     protected PopupKind activePopup;
+    /// <summary>
+    /// Gets a value indicating whether the active popup was opened from the central options popup.
+    /// </summary>
     protected bool popupOpenedFromCentral;
+    /// <summary>
+    /// Gets or sets the most recent position used to anchor the central context popup.
+    /// </summary>
     protected Point? centralContextPosition;
 
+    /// <summary>
+    /// Builds and displays the requested popup, optionally positioning it at a supplied point.
+    /// </summary>
+    /// <param name="kind">The popup content to display.</param>
+    /// <param name="fromCentral">Indicates whether the popup was opened from the central options popup.</param>
+    /// <param name="position">The optional point used to position the central popup.</param>
     protected void ShowPopup(PopupKind kind, bool fromCentral = false, Point? position = null)
     {
         activePopup = kind;
@@ -92,6 +128,11 @@ public abstract partial class CollectionListView<
             PopupPanel.ScaleToAsync(1, 150, Easing.CubicOut));
     }
 
+    /// <summary>
+    /// Gets the localized title for the specified popup kind.
+    /// </summary>
+    /// <param name="kind">The popup kind whose title is requested.</param>
+    /// <returns>The title displayed in the popup header.</returns>
     protected virtual string GetPopupTitle(PopupKind kind) => kind switch
     {
         PopupKind.Central => "Действия со списком",
@@ -104,6 +145,9 @@ public abstract partial class CollectionListView<
         _ => string.Empty
     };
 
+    /// <summary>
+    /// Provides a hook for derived controls to populate the message or item type popup.
+    /// </summary>
     protected virtual void OnBuildTypesContext() { }
 
     private void PositionPopup(PopupKind kind, Point? anchorPosition)
@@ -148,6 +192,9 @@ public abstract partial class CollectionListView<
         PopupContent.Children.Add(header);
     }
 
+    /// <summary>
+    /// Refreshes popup option visibility according to the active controller state.
+    /// </summary>
     protected void UpdatePopupOptionAvailability()
     {
         RefreshPopupVisualAvailability();
@@ -159,6 +206,10 @@ public abstract partial class CollectionListView<
         OnPopupOptionAvailabilityChanged();
     }
 
+    /// <summary>
+    /// Adds a muted text message to the current popup.
+    /// </summary>
+    /// <param name="value">The text displayed in the popup.</param>
     protected void AddPopupText(string value)
     {
         PopupContent.Children.Add(new Label
@@ -170,6 +221,14 @@ public abstract partial class CollectionListView<
         });
     }
 
+    /// <summary>
+    /// Adds an icon command to the current popup.
+    /// </summary>
+    /// <param name="text">The command caption.</param>
+    /// <param name="resourceKey">The resource key used to resolve the command icon.</param>
+    /// <param name="fileName">The fallback icon file name.</param>
+    /// <param name="action">The action invoked when the command is selected.</param>
+    /// <param name="addDivider">Indicates whether a divider is added after the command.</param>
     protected void AddPopupButton(string text, string resourceKey, string fileName, Action action, bool addDivider = true)
     {
         PopupContent.Children.Add(CreatePopupCommand(text, GetIcon(resourceKey, fileName), action));
@@ -177,6 +236,12 @@ public abstract partial class CollectionListView<
         if (addDivider) AddPopupDivider(PopupContent, indent: false);
     }
 
+    /// <summary>
+    /// Adds a reset icon button to the current popup.
+    /// </summary>
+    /// <param name="tooltip">The tooltip displayed for the button.</param>
+    /// <param name="action">The action invoked when the button is selected.</param>
+    /// <returns>The created reset button.</returns>
     protected ImageButton AddPopupResetButton(string tooltip, Action action)
     {
         ImageButton button = CreateIconButton(CollectionListImageKeys.ListReset, "list_reset.svg", tooltip, 34);
@@ -188,6 +253,14 @@ public abstract partial class CollectionListView<
         return button;
     }
 
+    /// <summary>
+    /// Adds an expandable section whose content is created on demand.
+    /// </summary>
+    /// <param name="title">The section header text.</param>
+    /// <param name="buildContent">The callback that creates the section content.</param>
+    /// <param name="initiallyExpanded">Indicates whether the section starts expanded.</param>
+    /// <param name="addDivider">Indicates whether a divider is added after the section.</param>
+    /// <param name="isAvailable">An optional predicate that determines whether the section is available.</param>
     protected void AddCollapsibleSection(
         string title,
         Action<VerticalStackLayout> buildContent,
@@ -206,8 +279,21 @@ public abstract partial class CollectionListView<
         PopupSectionVisuals.Add(section);
     }
 
+    /// <summary>
+    /// Adds a divider to the specified popup layout.
+    /// </summary>
+    /// <param name="host">The layout that receives the divider.</param>
+    /// <param name="indent">Indicates whether the divider is indented to align with popup option content.</param>
     protected void AddPopupDivider(VerticalStackLayout host, bool indent = true) => CreatePopupDivider(host, indent);
 
+    /// <summary>
+    /// Adds an option section from a collection of option descriptors.
+    /// </summary>
+    /// <param name="title">The section header text.</param>
+    /// <param name="options">The options displayed inside the section.</param>
+    /// <param name="addDivider">Indicates whether a divider is added after the section.</param>
+    /// <param name="isAvailable">An optional predicate that determines whether the section is available.</param>
+    /// <param name="appendContent">An optional callback that appends additional custom content to the section.</param>
     protected void AddPopupOptionSection(
         string title,
         IEnumerable<CollectionListOptionDescriptor> options,
@@ -221,6 +307,18 @@ public abstract partial class CollectionListView<
                 expanded ? CollectionListImageKeys.ListChevronDown : CollectionListImageKeys.ListChevronRight,
                 expanded ? "list_chevron_down.svg" : "list_chevron_right.svg"));
 
+    /// <summary>
+    /// Adds one option row to the specified popup layout.
+    /// </summary>
+    /// <param name="host">The layout that receives the option row.</param>
+    /// <param name="text">The option caption.</param>
+    /// <param name="iconResourceKey">The resource key used to resolve the option icon.</param>
+    /// <param name="iconFileName">The fallback icon file name.</param>
+    /// <param name="action">The action invoked when the option is selected.</param>
+    /// <param name="addDivider">Indicates whether a divider is added after the option.</param>
+    /// <param name="reorderAction">An optional callback used to reorder the option.</param>
+    /// <param name="stateKey">An optional key used to update the option state indicator.</param>
+    /// <param name="isAvailable">An optional predicate that determines whether the option is available.</param>
     protected void AddPopupOptionRow(
         VerticalStackLayout host,
         string text,
@@ -234,6 +332,9 @@ public abstract partial class CollectionListView<
             new CollectionListOptionDescriptor(
                 stateKey, text, GetIcon(iconResourceKey, iconFileName), action, addDivider, reorderAction, isAvailable));
 
+    /// <summary>
+    /// Begins the closing animation for the active popup.
+    /// </summary>
     protected void HidePopup()
     {
         if (!PopupLayer.IsVisible) return;

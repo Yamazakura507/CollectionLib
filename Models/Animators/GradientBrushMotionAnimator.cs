@@ -1,7 +1,6 @@
 using CollectionLib.Enums;
-using Microsoft.Maui.Dispatching;
 
-namespace CollectionLib.Controls;
+namespace CollectionLib.Models.Animators;
 
 /// <summary>
 /// Animates a shared gradient brush independently from the popup editor that configured it.
@@ -38,20 +37,18 @@ internal sealed class GradientBrushMotionAnimator
     public void Configure(Brush? brush, GradientMotionMode motionMode, bool enabled)
     {
         LinearGradientBrush? nextTarget = brush as LinearGradientBrush;
-        bool shouldAnimate = enabled
-            && motionMode != GradientMotionMode.None
-            && nextTarget is not null;
+        bool shouldAnimate = enabled && motionMode != GradientMotionMode.None && nextTarget is not null;
         bool sameTarget = ReferenceEquals(target, nextTarget);
 
-        if (sameTarget && mode == motionMode && timer.IsRunning == shouldAnimate)
-            return;
-
+        if (sameTarget && mode == motionMode && timer.IsRunning == shouldAnimate) return;
         if (sameTarget && target is not null && !shouldAnimate)
         {
             RestoreBaseBrush();
             timer.Stop();
+
             mode = motionMode;
             elapsedSeconds = 0;
+
             return;
         }
 
@@ -59,22 +56,23 @@ internal sealed class GradientBrushMotionAnimator
         {
             RestoreBaseBrush();
             timer.Stop();
+
             target = nextTarget;
+
             CaptureBaseBrush();
         }
         else if (timer.IsRunning)
         {
-            // Switching between animated modes keeps the captured, unanimated source stops.
             mode = motionMode;
             elapsedSeconds = 0;
+
             return;
         }
 
         mode = motionMode;
         elapsedSeconds = 0;
 
-        if (shouldAnimate)
-            timer.Start();
+        if (shouldAnimate) timer.Start();
     }
 
     /// <summary>
@@ -84,6 +82,7 @@ internal sealed class GradientBrushMotionAnimator
     {
         RestoreBaseBrush();
         timer.Stop();
+
         elapsedSeconds = 0;
     }
 
@@ -92,8 +91,7 @@ internal sealed class GradientBrushMotionAnimator
         baseStops.Clear();
         cyclicStops.Clear();
 
-        if (target is null)
-            return;
+        if (target is null) return;
 
         baseStart = target.StartPoint;
         baseEnd = target.EndPoint;
@@ -101,23 +99,18 @@ internal sealed class GradientBrushMotionAnimator
         foreach (GradientStop stop in target.GradientStops.OrderBy(stop => stop.Offset))
             baseStops.Add(new MotionStop(Math.Clamp(stop.Offset, 0, 1), stop.Color));
 
-        if (baseStops.Count < 2)
-            return;
+        if (baseStops.Count < 2) return;
 
         cycleLength = 1d + SeamLength;
 
-        foreach (MotionStop stop in baseStops)
-            cyclicStops.Add(stop);
+        foreach (MotionStop stop in baseStops) cyclicStops.Add(stop);
 
-        // The final segment blends the last color back into the first color.
-        // That seam makes the moving stop pattern periodic at the viewport boundaries.
         cyclicStops.Add(new MotionStop(cycleLength, baseStops[0].Color));
     }
 
     private void RestoreBaseBrush()
     {
-        if (target is null || baseStops.Count < 2)
-            return;
+        if (target is null || baseStops.Count < 2) return;
 
         target.StartPoint = baseStart;
         target.EndPoint = baseEnd;
@@ -129,6 +122,7 @@ internal sealed class GradientBrushMotionAnimator
         if (target is null || mode == GradientMotionMode.None || baseStops.Count < 2)
         {
             timer.Stop();
+
             return;
         }
 
@@ -141,59 +135,48 @@ internal sealed class GradientBrushMotionAnimator
                 target.StartPoint = baseStart;
                 target.EndPoint = baseEnd;
                 break;
-
             case GradientMotionMode.Pulse:
-                // The color sequence keeps travelling in one direction; only its pace pulses.
-                double pulsePhase = elapsedSeconds / 4d
-                    + 0.08d * Math.Sin(elapsedSeconds * 2d * Math.PI / 4d);
+                double pulsePhase = elapsedSeconds / 4d + 0.08d * Math.Sin(elapsedSeconds * 2d * Math.PI / 4d);
+
                 ApplyCyclicColorMotion(pulsePhase);
 
-                double scale = 0.92d + 0.16d
-                    * (0.5d + 0.5d * Math.Sin(elapsedSeconds * 2d * Math.PI / 3.5d));
+                double scale = 0.92d + 0.16d * (0.5d + 0.5d * Math.Sin(elapsedSeconds * 2d * Math.PI / 3.5d));
                 (target.StartPoint, target.EndPoint) = GetScaledGeometry(scale);
                 break;
-
             case GradientMotionMode.Rotate:
                 (target.StartPoint, target.EndPoint) = GetRotatedGeometry();
                 break;
         }
     }
 
-    /// <summary>
-    /// Shifts the color pattern continuously. A matching color is calculated at both edges,
-    /// while the remaining stops wrap around modulo the cycle length.
-    /// </summary>
     private void ApplyCyclicColorMotion(double phase)
     {
-        if (target is null || cyclicStops.Count < 3)
-            return;
+        if (target is null || cyclicStops.Count < 3) return;
 
         double shift = Modulo(phase * cycleLength, cycleLength);
         Color edgeColor = SampleCyclicColor(shift);
 
         List<MotionStop> shiftedStops = [];
+
         foreach (MotionStop stop in cyclicStops)
         {
             double offset = Modulo(stop.Offset - shift, cycleLength) / cycleLength;
 
-            if (offset <= 0.000001d || offset >= 0.999999d)
-                continue;
+            if (offset <= 0.000001d || offset >= 0.999999d) continue;
 
             shiftedStops.Add(new MotionStop(offset, stop.Color));
         }
 
         shiftedStops.Sort((left, right) => left.Offset.CompareTo(right.Offset));
 
-        List<MotionStop> normalizedStops =
-        [
-            new MotionStop(0, edgeColor)
-        ];
+        List<MotionStop> normalizedStops = [ new MotionStop(0, edgeColor) ];
 
         foreach (MotionStop stop in shiftedStops)
         {
             if (Math.Abs(stop.Offset - normalizedStops[^1].Offset) < 0.000001d)
             {
                 normalizedStops[^1] = stop;
+
                 continue;
             }
 
@@ -201,6 +184,7 @@ internal sealed class GradientBrushMotionAnimator
         }
 
         normalizedStops.Add(new MotionStop(1, edgeColor));
+
         target.GradientStops = CreateGradientStopCollection(normalizedStops);
     }
 
@@ -213,13 +197,10 @@ internal sealed class GradientBrushMotionAnimator
             MotionStop left = cyclicStops[index];
             MotionStop right = cyclicStops[index + 1];
 
-            if (normalizedPosition > right.Offset)
-                continue;
+            if (normalizedPosition > right.Offset) continue;
 
             double span = right.Offset - left.Offset;
-            double amount = span <= 0.000001d
-                ? 0
-                : (normalizedPosition - left.Offset) / span;
+            double amount = span <= 0.000001d ? 0 : (normalizedPosition - left.Offset) / span;
 
             return Interpolate(left.Color, right.Color, amount);
         }
@@ -233,28 +214,21 @@ internal sealed class GradientBrushMotionAnimator
         double cosine = Math.Cos(angle);
         double sine = Math.Sin(angle);
 
-        return (
-            RotateAroundCenter(baseStart, cosine, sine),
-            RotateAroundCenter(baseEnd, cosine, sine));
+        return (RotateAroundCenter(baseStart, cosine, sine), RotateAroundCenter(baseEnd, cosine, sine));
     }
 
-    private (Point Start, Point End) GetScaledGeometry(double scale)
-        => (
-            ScaleAroundCenter(baseStart, scale),
-            ScaleAroundCenter(baseEnd, scale));
+    private (Point Start, Point End) GetScaledGeometry(double scale) => (ScaleAroundCenter(baseStart, scale), ScaleAroundCenter(baseEnd, scale));
 
     private static GradientStopCollection CreateGradientStopCollection(IEnumerable<MotionStop> stops)
     {
         GradientStopCollection collection = [];
 
-        foreach (MotionStop stop in stops.OrderBy(stop => stop.Offset))
-            collection.Add(new GradientStop(stop.Color, (float)Math.Clamp(stop.Offset, 0, 1)));
+        foreach (MotionStop stop in stops.OrderBy(stop => stop.Offset)) collection.Add(new GradientStop(stop.Color, (float)Math.Clamp(stop.Offset, 0, 1)));
 
         return collection;
     }
 
-    private static double Modulo(double value, double modulus)
-        => ((value % modulus) + modulus) % modulus;
+    private static double Modulo(double value, double modulus) => ((value % modulus) + modulus) % modulus;
 
     private static Color Interpolate(Color start, Color end, double amount)
     {
@@ -272,15 +246,8 @@ internal sealed class GradientBrushMotionAnimator
         double x = point.X - 0.5d;
         double y = point.Y - 0.5d;
 
-        return new Point(
-            0.5d + x * cosine - y * sine,
-            0.5d + x * sine + y * cosine);
+        return new Point(0.5d + x * cosine - y * sine, 0.5d + x * sine + y * cosine);
     }
 
-    private static Point ScaleAroundCenter(Point point, double scale)
-        => new(
-            0.5d + (point.X - 0.5d) * scale,
-            0.5d + (point.Y - 0.5d) * scale);
-
-    private sealed record MotionStop(double Offset, Color Color);
+    private static Point ScaleAroundCenter(Point point, double scale) => new(0.5d + (point.X - 0.5d) * scale, 0.5d + (point.Y - 0.5d) * scale);
 }
