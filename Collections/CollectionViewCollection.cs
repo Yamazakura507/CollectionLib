@@ -48,7 +48,6 @@ public abstract class CollectionViewCollection
     private readonly HashSet<TFilterRule> observedFilters = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<TSearchRule> observedSearches = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<TGroupRule> observedGroups = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<TItem, int> observedItems = new(ReferenceEqualityComparer.Instance);
     private bool isDisposed;
     private SearchOptions searchOptions = new();
     private IReadOnlyList<GroupNode<TItem, TGroupParameter>> groups = Array.Empty<GroupNode<TItem, TGroupParameter>>();
@@ -114,7 +113,6 @@ public abstract class CollectionViewCollection
         this.groupKeySelector = groupKeySelector ?? throw new ArgumentNullException(nameof(groupKeySelector));
         filteredItemsView = new ReadOnlyObservableCollection<TItem>(filteredItems);
 
-        InitializeExistingItemTracking();
         InitializeViewTracking();
     }
 
@@ -139,13 +137,10 @@ public abstract class CollectionViewCollection
         this.searchValuesSelector = searchValuesSelector ?? throw new ArgumentNullException(nameof(searchValuesSelector));
         this.groupKeySelector = groupKeySelector ?? throw new ArgumentNullException(nameof(groupKeySelector));
         filteredItemsView = new ReadOnlyObservableCollection<TItem>(filteredItems);
-        InitializeExistingItemTracking();
+
         InitializeViewTracking();
     }
 
-    /// <summary>
-    /// Recalculates the filtered/search view and dependent groups.
-    /// </summary>
     /// <summary>
     /// Releases all item, rule and search-option subscriptions owned by this collection.
     /// The collection remains readable but no longer maintains derived views.
@@ -172,10 +167,6 @@ public abstract class CollectionViewCollection
         foreach (TGroupRule rule in observedGroups) rule.PropertyChanged -= GroupRuleOnPropertyChanged;
 
         observedGroups.Clear();
-
-        foreach (TItem item in observedItems.Keys) item.PropertyChanged -= ItemOnPropertyChanged;
-
-        observedItems.Clear();
 
         base.Dispose();
     }
@@ -214,103 +205,30 @@ public abstract class CollectionViewCollection
     public void RefreshWhere() => RefreshViews();
 
     /// <summary>
-    /// Attaches item property-change tracking after an item is inserted.
-    /// </summary>
-    /// <param name="index">Index where the item is inserted.</param>
-    /// <param name="item">Item being inserted.</param>
-    protected override void InsertItem(int index, TItem item)
-    {
-        base.InsertItem(index, item);
-
-        AttachItem(item);
-    }
-
-    /// <summary>
-    /// Replaces an item and transfers property-change tracking to the replacement.
-    /// </summary>
-    /// <param name="index">Index of the item being replaced.</param>
-    /// <param name="item">Replacement item.</param>
-    protected override void SetItem(int index, TItem item)
-    {
-        TItem previous = this[index];
-
-        base.SetItem(index, item);
-        DetachItem(previous);
-
-        if (!isDisposed) AttachItem(item);
-    }
-
-    /// <summary>
-    /// Removes item property-change tracking after an item is removed.
-    /// </summary>
-    /// <param name="index">Index of the item being removed.</param>
-    protected override void RemoveItem(int index)
-    {
-        TItem previous = this[index];
-
-        base.RemoveItem(index);
-        DetachItem(previous);
-    }
-
-    /// <summary>
-    /// Detaches property-change tracking from all items before clearing the collection.
-    /// </summary>
-    protected override void ClearItems()
-    {
-        TItem[] previousItems = this.ToArray();
-
-        base.ClearItems();
-
-        foreach (TItem item in previousItems) DetachItem(item);
-    }
-
-    /// <summary>
-    /// Refreshes the filtered and grouped views after the source collection changes.
+    /// Refreshes the filtered and grouped views after an external source change.
+    /// Intermediate Move events raised by the base sorting operation are suppressed.
     /// </summary>
     /// <param name="e">Details of the source collection change.</param>
     protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
     {
         base.OnCollectionChanged(e);
 
-        if (!isDisposed) RefreshViews();
+        if (!isDisposed && !IsApplyingSort && filteredItemsView is not null) RefreshViews();
     }
 
-    private void InitializeExistingItemTracking()
+    /// <inheritdoc />
+    protected override void OnItemPropertyChanged(PropertyChangedEventArgs e)
     {
-        foreach (TItem item in this) AttachItem(item);
+        base.OnItemPropertyChanged(e);
+        RefreshViews();
     }
 
-    private void AttachItem(TItem item)
+    /// <inheritdoc />
+    protected override void OnSortRulesChanged()
     {
-        if (observedItems.TryGetValue(item, out int count))
-        {
-            observedItems[item] = count + 1;
-
-            return;
-        }
-
-        observedItems.Add(item, 1);
-
-        item.PropertyChanged += ItemOnPropertyChanged;
+        base.OnSortRulesChanged();
+        RefreshViews();
     }
-
-    private void DetachItem(TItem item)
-    {
-        if (!observedItems.TryGetValue(item, out int count)) return;
-
-        if (count > 1)
-        {
-            observedItems[item] = count - 1;
-
-            return;
-        }
-
-        observedItems.Remove(item);
-
-        item.PropertyChanged -= ItemOnPropertyChanged;
-    }
-
-    private void ItemOnPropertyChanged(object? sender, PropertyChangedEventArgs e) => RefreshViews();
 
     private void InitializeViewTracking()
     {

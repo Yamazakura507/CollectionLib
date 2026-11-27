@@ -213,12 +213,10 @@ public abstract partial class CollectionListView<
     /// <param name="value">The text displayed in the popup.</param>
     protected void AddPopupText(string value)
     {
-        PopupContent.Children.Add(new Label
+        PopupContent.Children.Add(new CollectionPopupTextView
         {
             Text = value,
-            FontSize = 11,
-            LineBreakMode = LineBreakMode.WordWrap,
-            TextColor = PopupMutedColor
+            MutedColor = PopupMutedColor
         });
     }
 
